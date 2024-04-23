@@ -17,8 +17,8 @@ import (
 
 type GetTotalTaxCases struct {
 	name        string
-	input       float32
-	expectedTax float32
+	input       float64
+	expectedTax float64
 }
 
 func NewContext(method string, target string, body io.Reader) (echo.Context, *httptest.ResponseRecorder) {
@@ -77,9 +77,12 @@ func TestGetTotalTax(t *testing.T) {
 		{name: "Given income 150000 should return 0", input: 150000, expectedTax: 0},
 		{name: "Given income 150,001 should return 0.1", input: 150001, expectedTax: 0.1},
 		{name: "Given income 500,000 should return 35,000", input: 500000, expectedTax: 35000},
-		{name: "Given income 1,000,000 should return 35,000+ 75,0000", input: 1000000, expectedTax: 110000},
-		{name: "Given income 2,000,000 should return 110,000 + 200,000", input: 2000000, expectedTax: 310000},
-		{name: "Given income 3,000,000 should return 310,000 + 350,000", input: 3000000, expectedTax: 660000},
+		{name: "Given income 500,001 should return 35,000.15", input: 500000, expectedTax: 35000.15},
+		{name: "Given income 1,000,000 should return 35,000 + 75,0000 = 110,000", input: 1000000, expectedTax: 110000},
+		{name: "Given income 1,000,001 should return 35,000 + 75,0000 = 110,000.2", input: 1000000, expectedTax: 110000.2},
+		{name: "Given income 2,000,000 should return 110,000 + 200,000 = 310,000", input: 2000000, expectedTax: 310000},
+		{name: "Given income 2,000,001 should return 110,000 + 200,000 = 310,000.3", input: 2000000, expectedTax: 310000.34},
+		{name: "Given income 3,000,000 should return 310,000 + 350,000 = 660,000", input: 3000000, expectedTax: 660000},
 	}
 
 	RunTestGetTotalTax(t, cases)
@@ -88,15 +91,25 @@ func TestGetTotalTax(t *testing.T) {
 func TestCalculate(t *testing.T) {
 	h := calculator.New()
 	res := h.CalculateTax(210000)
-	assert.Equal(t, float32(0.0), res)
+	assert.Equal(t, float64(0.0), res)
 	res = h.CalculateTax(210001)
-	assert.Greater(t, res, float32(0.0))
+	assert.Greater(t, res, float64(0.0))
 }
 
 func TestCalculationHandler(t *testing.T) {
 	t.Run("Given valid request body should return 200", func(t *testing.T) {
 
-		c, rec := NewContext(http.MethodPost, "/tax/calculations", strings.NewReader(`{"totalIncome": 50000}`))
+		c, rec := NewContext(http.MethodPost, "/tax/calculations", strings.NewReader(`
+		{
+			"totalIncome": 500000.0,
+			"wht": 0.0,
+			"allowances": [
+				{
+					"allowanceType": "donation",
+					"amount": 0.0
+				}
+			]
+		}`))
 		c.Request().Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
 		h := &calculator.Handler{}

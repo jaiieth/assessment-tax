@@ -8,7 +8,7 @@ import (
 )
 
 type Handler struct {
-	PersonalDeduction float32
+	PersonalDeduction float64
 }
 
 func New() *Handler {
@@ -23,7 +23,7 @@ type SuccessResponse struct {
 }
 
 type CalculateResponse struct {
-	Tax float32 `json:"tax"`
+	Tax float64 `json:"tax"`
 }
 
 var validate *validator.Validate
@@ -32,7 +32,7 @@ func init() {
 	validate = validator.New(validator.WithRequiredStructEnabled())
 }
 
-func (h *Handler) CalculateTax(totalIncome float32) float32 {
+func (h *Handler) CalculateTax(totalIncome float64) float64 {
 	return GetTotalTax(totalIncome - h.PersonalDeduction)
 
 }
