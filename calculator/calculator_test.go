@@ -21,6 +21,12 @@ type GetTotalTaxCases struct {
 	expectedTax float64
 }
 
+type CalculateTaxWithAllowanceCases struct {
+	name        string
+	body        calculator.CalculateTaxBody
+	expectedTax float64
+}
+
 func NewContext(method string, target string, body io.Reader) (echo.Context, *httptest.ResponseRecorder) {
 	e := echo.New()
 	req := httptest.NewRequest(method, target, body)
@@ -66,7 +72,7 @@ func TestCalculateTax(t *testing.T) {
 		}
 
 		tax, taxRefund := calculator.CalculateTax(body)
-		assert.Equal(t, float64(0), tax)
+		assert.Equal(t, 0.0, tax)
 		assert.Equal(t, 50000.0, taxRefund)
 	})
 	t.Run("Given income 500,000 with no WHT should return tax:29,000 and taxRefund:0 ", func(t *testing.T) {
@@ -79,7 +85,7 @@ func TestCalculateTax(t *testing.T) {
 		assert.Equal(t, 29000.0, tax)
 	})
 
-	t.Run("Given income 500,000 with 25,000 WHT should return tax:4000 and taxRefund:0", func(t *testing.T) {
+	t.Run("Given income 500,000 with 25,000 WHT should return tax:4,000 and taxRefund:0", func(t *testing.T) {
 		body := calculator.CalculateTaxBody{
 			TotalIncome:    500000,
 			WithHoldingTax: 25000,
@@ -88,6 +94,59 @@ func TestCalculateTax(t *testing.T) {
 		tax, _ := calculator.CalculateTax(body)
 		assert.Equal(t, 4000.0, tax)
 	})
+}
+
+func RunTestCalculateTaxWithAlloawance(t *testing.T, cases []CalculateTaxWithAllowanceCases) {
+	for _, v := range cases {
+
+		t.Run(v.name, func(t *testing.T) {
+			tax, _ := calculator.CalculateTax(v.body)
+			assert.Equal(t, v.expectedTax, tax)
+		})
+	}
+}
+
+func TestCalculateTaxWithAlloawance(t *testing.T) {
+	cases := []CalculateTaxWithAllowanceCases{
+		{
+			name:        "Given income 500,000 with 50,000 donation should return tax:24,000",
+			expectedTax: 24000.0,
+			body: calculator.CalculateTaxBody{
+				TotalIncome: 500000,
+				Allowances: []calculator.Allowance{{
+					Type:   calculator.Donation,
+					Amount: 50000}}},
+		},
+		{
+			name:        "Given income 500,000 with 100,000 donation should return tax:19,000",
+			expectedTax: 19000.0,
+			body: calculator.CalculateTaxBody{
+				TotalIncome: 500000,
+				Allowances: []calculator.Allowance{{
+					Type:   calculator.Donation,
+					Amount: 100000}}},
+		},
+		{
+			name:        "Given income 500,000 with 100,001 donation should return tax:19,000",
+			expectedTax: 19000.0,
+			body: calculator.CalculateTaxBody{
+				TotalIncome: 500000,
+				Allowances: []calculator.Allowance{{
+					Type:   calculator.Donation,
+					Amount: 100001}}},
+		},
+		// {
+		// 	name:        "Given income 500,000 with 2 donations should return tax:19,000",
+		// 	expectedTax: 19000.0,
+		// 	body: calculator.CalculateTaxBody{
+		// 		TotalIncome: 500000,
+		// 		Allowances: []calculator.Allowance{{
+		// 			Type:   calculator.Donation,
+		// 			Amount: 100001}}},
+		// },
+	}
+
+	RunTestCalculateTaxWithAlloawance(t, cases)
 }
 
 func TestCalculationHandler(t *testing.T) {
@@ -132,6 +191,35 @@ func TestCalculationHandler(t *testing.T) {
 
 	t.Run("Given no request body should return 400", func(t *testing.T) {
 		c, rec := NewContext(http.MethodPost, "/tax/calculations", strings.NewReader(`{}`))
+		c.Request().Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+
+		err := calculator.Handler(c)
+
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+		var response calculator.ErrorResponse
+		err = json.Unmarshal(rec.Body.Bytes(), &response)
+		assert.NoError(t, err)
+
+		assert.Equal(t, "invalid request", response.Message)
+	})
+	t.Run("Given request body with duplicate allowance should return 400", func(t *testing.T) {
+		c, rec := NewContext(http.MethodPost, "/tax/calculations", strings.NewReader(`
+		{
+			"totalIncome": 500000.0,
+			"wht": 0.0,
+			"allowances": [
+				{
+					"allowanceType": "donation",
+					"amount": 0
+				},
+				{
+					"allowanceType": "donation",
+					"amount": 0
+				}
+			]
+		}`))
 		c.Request().Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
 		err := calculator.Handler(c)
