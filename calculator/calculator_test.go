@@ -71,9 +71,9 @@ func TestCalculateTax(t *testing.T) {
 			WithHoldingTax: 50000,
 		}
 
-		tax, taxRefund := calculator.CalculateTax(body)
-		assert.Equal(t, 0.0, tax)
-		assert.Equal(t, 50000.0, taxRefund)
+		res := calculator.CalculateTax(body)
+		assert.Equal(t, 0.0, res.Tax)
+		assert.Equal(t, 50000.0, res.TaxRefund)
 	})
 	t.Run("Given income 500,000 with no WHT should return tax:29,000 and taxRefund:0 ", func(t *testing.T) {
 		body := calculator.CalculateTaxBody{
@@ -81,8 +81,8 @@ func TestCalculateTax(t *testing.T) {
 			WithHoldingTax: 0.0,
 		}
 
-		tax, _ := calculator.CalculateTax(body)
-		assert.Equal(t, 29000.0, tax)
+		res := calculator.CalculateTax(body)
+		assert.Equal(t, 29000.0, res.Tax)
 	})
 
 	t.Run("Given income 500,000 with 25,000 WHT should return tax:4,000 and taxRefund:0", func(t *testing.T) {
@@ -91,8 +91,8 @@ func TestCalculateTax(t *testing.T) {
 			WithHoldingTax: 25000,
 		}
 
-		tax, _ := calculator.CalculateTax(body)
-		assert.Equal(t, 4000.0, tax)
+		res := calculator.CalculateTax(body)
+		assert.Equal(t, 4000.0, res.Tax)
 	})
 }
 
@@ -100,8 +100,8 @@ func RunTestCalculateTaxWithAlloawance(t *testing.T, cases []CalculateTaxWithAll
 	for _, v := range cases {
 
 		t.Run(v.name, func(t *testing.T) {
-			tax, _ := calculator.CalculateTax(v.body)
-			assert.Equal(t, v.expectedTax, tax)
+			res := calculator.CalculateTax(v.body)
+			assert.Equal(t, v.expectedTax, res.Tax)
 		})
 	}
 }
@@ -232,5 +232,26 @@ func TestCalculationHandler(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, "invalid request", response.Message)
+	})
+}
+
+func TestGetTaxLevel(t *testing.T) {
+	t.Run("Given taxable 150,000 should return all tax level with 0 tax", func(t *testing.T) {
+		taxLevels := calculator.GetTaxLevels(150000)
+
+		assert.Equal(t, 5, len(taxLevels))
+		for _, tl := range taxLevels {
+			assert.Equal(t, 0.0, tl.Tax)
+		}
+	})
+
+	t.Run("Each level should not exceed level limit ", func(t *testing.T) {
+		taxLevels := calculator.GetTaxLevels(2000001)
+
+		assert.Equal(t, 5, len(taxLevels))
+		assert.Equal(t, 0.0, taxLevels[0].Tax)
+		assert.LessOrEqual(t, 35000.0, taxLevels[1].Tax)
+		assert.LessOrEqual(t, 75000.0, taxLevels[2].Tax)
+		assert.LessOrEqual(t, 200000.0, taxLevels[3].Tax)
 	})
 }

@@ -35,8 +35,8 @@ func Handler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "invalid request"})
 	}
 
-	tax, taxRefund := CalculateTax(body)
+	res := CalculateTax(body)
 
-	return c.JSON(http.StatusOK, CalculateResponse{Tax: tax, TaxRefund: taxRefund})
+	return c.JSON(http.StatusOK, res)
 
 }
