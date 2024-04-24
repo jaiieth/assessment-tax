@@ -24,26 +24,31 @@ var AllowanceType = []string{
 
 var PersonalDeduction float64 = 60000.0
 
-func round(x float64) float64 {
-	return float64(math.Round(float64(x)*100) / 100)
-}
-
 func GetTotalTax(taxable float64) float64 {
 	if taxable > 2000000 {
-		return round(((taxable - 2000000) * 0.35) + GetTotalTax(2000000))
+		return ((taxable - 2000000) * 0.35) + GetTotalTax(2000000)
 	}
 
 	if taxable > 1000000 {
-		return round(((taxable - 1000000) * 0.20) + GetTotalTax(1000000))
+		return ((taxable - 1000000) * 0.20) + GetTotalTax(1000000)
 	}
 
 	if taxable > 500000 {
-		return round(((taxable - 500000) * 0.15) + GetTotalTax(500000))
+		return ((taxable - 500000) * 0.15) + GetTotalTax(500000)
 	}
 
 	if taxable > 150000 {
-		return round(((taxable - 150000) * 0.10) + GetTotalTax(150000))
+		return ((taxable - 150000) * 0.10) + GetTotalTax(150000)
 	}
 
 	return 0.0
+}
+
+func CalculateTax(b CalculateTaxBody) (tax, taxRefund float64) {
+	tax = GetTotalTax(b.TotalIncome-PersonalDeduction) - b.WithHoldingTax
+
+	if tax < 0 {
+		return 0, math.Abs(tax)
+	}
+	return tax, 0
 }

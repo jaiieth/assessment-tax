@@ -20,9 +20,7 @@ func main() {
 		return c.String(http.StatusOK, "Hello, Go Bootcamp!")
 	})
 
-	c := calculator.New()
-
-	e.POST("/tax/calculations", c.CalculationHandler)
+	e.POST("/tax/calculations", calculator.Handler)
 
 	e.Logger.Fatal(e.Start(":1323"))
 }
