@@ -11,6 +11,7 @@ import (
 
 	"github.com/jaiieth/assessment-tax/calculator"
 	"github.com/jaiieth/assessment-tax/helper"
+	"github.com/jaiieth/assessment-tax/postgres"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -25,6 +26,15 @@ type CalculateTaxWithAllowanceCases struct {
 	name        string
 	body        calculator.CalculateTaxBody
 	expectedTax float64
+}
+
+type StubDatabase struct {
+	Config calculator.Config
+	err    error
+}
+
+func (db StubDatabase) GetConfig() (calculator.Config, error) {
+	return db.Config, nil
 }
 
 func NewContext(method string, target string, body io.Reader) (echo.Context, *httptest.ResponseRecorder) {
@@ -71,7 +81,10 @@ func TestCalculateTax(t *testing.T) {
 			WithHoldingTax: 50000,
 		}
 
-		res := calculator.CalculateTax(body)
+		res := calculator.CalculateTax(
+			body,
+			calculator.Config{PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION})
+
 		assert.Equal(t, 0.0, res.Tax)
 		assert.Equal(t, 50000.0, res.TaxRefund)
 	})
@@ -81,7 +94,9 @@ func TestCalculateTax(t *testing.T) {
 			WithHoldingTax: 0.0,
 		}
 
-		res := calculator.CalculateTax(body)
+		res := calculator.CalculateTax(
+			body,
+			calculator.Config{PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION})
 		assert.Equal(t, 29000.0, res.Tax)
 	})
 
@@ -91,7 +106,9 @@ func TestCalculateTax(t *testing.T) {
 			WithHoldingTax: 25000,
 		}
 
-		res := calculator.CalculateTax(body)
+		res := calculator.CalculateTax(
+			body,
+			calculator.Config{PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION})
 		assert.Equal(t, 4000.0, res.Tax)
 	})
 }
@@ -100,7 +117,9 @@ func RunTestCalculateTaxWithAlloawance(t *testing.T, cases []CalculateTaxWithAll
 	for _, v := range cases {
 
 		t.Run(v.name, func(t *testing.T) {
-			res := calculator.CalculateTax(v.body)
+			res := calculator.CalculateTax(
+				v.body,
+				calculator.Config{PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION})
 			assert.Equal(t, v.expectedTax, res.Tax)
 		})
 	}
@@ -165,12 +184,18 @@ func TestCalculationHandler(t *testing.T) {
 		}`))
 		c.Request().Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
-		err := calculator.Handler(c)
+		stubHander := calculator.New(
+			StubDatabase{
+				Config: calculator.Config{
+					PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION,
+				}})
+
+		err := stubHander.CalculateTax(c)
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
-		var response calculator.CalculateResponse
+		var response helper.CalculateResponse
 		err = json.Unmarshal(rec.Body.Bytes(), &response)
 		assert.NoError(t, err)
 	})
@@ -179,12 +204,18 @@ func TestCalculationHandler(t *testing.T) {
 		c, rec := NewContext(http.MethodPost, "/tax/calculations", strings.NewReader(`{"totalIncome": Invalid}`))
 		c.Request().Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
-		err := calculator.Handler(c)
+		stubHander := calculator.New(
+			StubDatabase{
+				Config: calculator.Config{
+					PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION,
+				}})
+
+		err := stubHander.CalculateTax(c)
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 
-		var response calculator.ErrorResponse
+		var response helper.ErrorResponse
 		err = json.Unmarshal(rec.Body.Bytes(), &response)
 		assert.NoError(t, err)
 	})
@@ -193,12 +224,18 @@ func TestCalculationHandler(t *testing.T) {
 		c, rec := NewContext(http.MethodPost, "/tax/calculations", strings.NewReader(`{}`))
 		c.Request().Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
-		err := calculator.Handler(c)
+		stubHander := calculator.New(
+			StubDatabase{
+				Config: calculator.Config{
+					PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION,
+				}})
+
+		err := stubHander.CalculateTax(c)
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 
-		var response calculator.ErrorResponse
+		var response helper.ErrorResponse
 		err = json.Unmarshal(rec.Body.Bytes(), &response)
 		assert.NoError(t, err)
 
@@ -222,12 +259,18 @@ func TestCalculationHandler(t *testing.T) {
 		}`))
 		c.Request().Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
-		err := calculator.Handler(c)
+		stubHander := calculator.New(
+			StubDatabase{
+				Config: calculator.Config{
+					PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION,
+				}})
+
+		err := stubHander.CalculateTax(c)
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 
-		var response calculator.ErrorResponse
+		var response helper.ErrorResponse
 		err = json.Unmarshal(rec.Body.Bytes(), &response)
 		assert.NoError(t, err)
 

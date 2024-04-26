@@ -34,8 +34,6 @@ var AllowanceType = []string{
 	Donation, KReceipt,
 }
 
-var PersonalDeduction float64 = 60000.0
-
 func GetTotalTax(taxable float64) float64 {
 	if taxable > 2000000 {
 		return ((taxable - 2000000) * 0.35) + GetTotalTax(2000000)
@@ -83,16 +81,16 @@ func getDonationAllowance(allowances []Allowance) float64 {
 	return math.Min(donation, maxDonation)
 }
 
-func CalculateTax(b CalculateTaxBody) CalculateTaxResponse {
+func CalculateTax(b CalculateTaxBody, c Config) CalculateTaxResponse {
 	allowance := getDonationAllowance(b.Allowances)
 
-	tax := GetTotalTax(b.TotalIncome-PersonalDeduction-allowance) - b.WithHoldingTax
+	tax := GetTotalTax(b.TotalIncome-c.PersonalDeduction-allowance) - b.WithHoldingTax
 	roundedTax := math.Round(tax*100) / 100
 	var taxLevel []TaxLevel
 	if tax < 0 {
 		return CalculateTaxResponse{0, taxLevel, math.Abs(roundedTax)}
 	}
 
-	taxLevel = GetTaxLevels(b.TotalIncome - allowance - PersonalDeduction)
+	taxLevel = GetTaxLevels(b.TotalIncome - allowance - c.PersonalDeduction)
 	return CalculateTaxResponse{math.Max(0, roundedTax), taxLevel, 0}
 }
