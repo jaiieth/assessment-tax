@@ -9,7 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jaiieth/assessment-tax/calculator"
+	"github.com/jaiieth/assessment-tax/handler"
+	"github.com/jaiieth/assessment-tax/handler/calculator"
 	"github.com/jaiieth/assessment-tax/helper"
 	"github.com/jaiieth/assessment-tax/postgres"
 	"github.com/labstack/echo/v4"
@@ -34,6 +35,9 @@ type StubDatabase struct {
 }
 
 func (db StubDatabase) GetConfig() (calculator.Config, error) {
+	return db.Config, nil
+}
+func (db StubDatabase) SetPersonalDeduction(float64) (calculator.Config, error) {
 	return db.Config, nil
 }
 
@@ -184,7 +188,7 @@ func TestCalculationHandler(t *testing.T) {
 		}`))
 		c.Request().Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
-		stubHander := calculator.New(
+		stubHander := handler.New(
 			StubDatabase{
 				Config: calculator.Config{
 					PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION,
@@ -204,7 +208,7 @@ func TestCalculationHandler(t *testing.T) {
 		c, rec := NewContext(http.MethodPost, "/tax/calculations", strings.NewReader(`{"totalIncome": Invalid}`))
 		c.Request().Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
-		stubHander := calculator.New(
+		stubHander := handler.New(
 			StubDatabase{
 				Config: calculator.Config{
 					PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION,
@@ -224,7 +228,7 @@ func TestCalculationHandler(t *testing.T) {
 		c, rec := NewContext(http.MethodPost, "/tax/calculations", strings.NewReader(`{}`))
 		c.Request().Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
-		stubHander := calculator.New(
+		stubHander := handler.New(
 			StubDatabase{
 				Config: calculator.Config{
 					PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION,
@@ -259,7 +263,7 @@ func TestCalculationHandler(t *testing.T) {
 		}`))
 		c.Request().Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
-		stubHander := calculator.New(
+		stubHander := handler.New(
 			StubDatabase{
 				Config: calculator.Config{
 					PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION,

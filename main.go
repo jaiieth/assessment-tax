@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	"github.com/jaiieth/assessment-tax/calculator"
+	"github.com/jaiieth/assessment-tax/handler"
 	"github.com/jaiieth/assessment-tax/helper"
 	"github.com/jaiieth/assessment-tax/middleware"
 	"github.com/jaiieth/assessment-tax/postgres"
@@ -24,9 +24,11 @@ func main() {
 		return c.String(http.StatusOK, "Hello, Go Bootcamp!")
 	})
 
-	handler := calculator.New(db)
+	h := handler.New(db)
 
-	e.POST("/tax/calculations", handler.CalculateTax)
+	e.GET("/tax/config", h.GetConfig)
+	e.POST("/tax/calculations", h.CalculateTax)
+	e.POST("/admin/deductions/personal", h.SetPersonalDeduction)
 
 	e.Logger.Fatal(e.Start(":1323"))
 }
