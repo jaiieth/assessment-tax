@@ -38,5 +38,6 @@ func New() (*Postgres, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &Postgres{Db: db}, nil
 }
