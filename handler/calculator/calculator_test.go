@@ -2,7 +2,6 @@ package calculator_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -56,7 +55,6 @@ func RunTestGetTotalTax(t *testing.T, cases []GetTotalTaxCases) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			tax := calculator.GetTotalTax(c.input)
-			fmt.Println("🚀 | file: calculator_test.go | line 70 | t.Run | tax : ", tax)
 			assert.Equal(t, c.expectedTax, tax)
 		})
 	}
@@ -194,7 +192,7 @@ func TestCalculationHandler(t *testing.T) {
 					PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION,
 				}})
 
-		err := stubHander.CalculateTax(c)
+		err := stubHander.CalculateTaxHandler(c)
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
@@ -214,7 +212,7 @@ func TestCalculationHandler(t *testing.T) {
 					PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION,
 				}})
 
-		err := stubHander.CalculateTax(c)
+		err := stubHander.CalculateTaxHandler(c)
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -234,7 +232,7 @@ func TestCalculationHandler(t *testing.T) {
 					PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION,
 				}})
 
-		err := stubHander.CalculateTax(c)
+		err := stubHander.CalculateTaxHandler(c)
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -269,7 +267,7 @@ func TestCalculationHandler(t *testing.T) {
 					PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION,
 				}})
 
-		err := stubHander.CalculateTax(c)
+		err := stubHander.CalculateTaxHandler(c)
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)

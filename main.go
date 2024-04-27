@@ -26,10 +26,10 @@ func main() {
 
 	h := handler.New(db)
 
-	e.GET("/tax/config", h.GetConfig)
-	e.POST("/tax/calculations", h.CalculateTax)
-	e.POST("/tax/calculations/upload-csv", h.CalculateByCsv)
-	e.POST("/admin/deductions/personal", h.SetPersonalDeduction)
+	e.GET("/tax/config", h.GetConfigHandler)
+	e.POST("/tax/calculations", h.CalculateTaxHandler)
+	e.POST("/tax/calculations/upload-csv", h.CalculateByCsvHandler)
+	e.POST("/admin/deductions/personal", h.SetPersonalDeductionHandler)
 
 	e.Logger.Fatal(e.Start(":1323"))
 }

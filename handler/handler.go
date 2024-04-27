@@ -2,14 +2,11 @@ package handler
 
 import (
 	"fmt"
-	"mime/multipart"
 	"net/http"
-	"strings"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/gocarina/gocsv"
 	"github.com/jaiieth/assessment-tax/config"
-	"github.com/jaiieth/assessment-tax/handler/calculator"
+	calc "github.com/jaiieth/assessment-tax/handler/calculator"
 	"github.com/jaiieth/assessment-tax/helper"
 	"github.com/labstack/echo/v4"
 )
@@ -33,8 +30,8 @@ func init() {
 	validate = validator.New(validator.WithRequiredStructEnabled())
 }
 
-func (h Handler) CalculateTax(c echo.Context) error {
-	var body calculator.CalculateTaxBody
+func (h Handler) CalculateTaxHandler(c echo.Context) error {
+	var body calc.CalculateTaxBody
 	if err := c.Bind(&body); err != nil {
 		return c.JSON(http.StatusBadRequest, helper.ErrorRes("invalid request"))
 	}
@@ -48,14 +45,14 @@ func (h Handler) CalculateTax(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, helper.ErrorRes("Oops, something went wrong"))
 	}
 
-	res := calculator.CalculateTax(body, config)
+	res := calc.CalculateTax(body, config)
 
 	return c.JSON(http.StatusOK, res)
 
 }
 
-func (h Handler) SetPersonalDeduction(c echo.Context) error {
-	var body calculator.SetPersonalDeductionBody
+func (h Handler) SetPersonalDeductionHandler(c echo.Context) error {
+	var body calc.SetPersonalDeductionBody
 	if err := c.Bind(&body); err != nil {
 		return c.JSON(http.StatusBadRequest, helper.ErrorRes("invalid request"))
 	}
@@ -78,7 +75,7 @@ func (h Handler) SetPersonalDeduction(c echo.Context) error {
 	return c.JSON(http.StatusOK, config)
 }
 
-func (h Handler) GetConfig(c echo.Context) error {
+func (h Handler) GetConfigHandler(c echo.Context) error {
 	config, err := h.DB.GetConfig()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, helper.ErrorRes("Oops, something went wrong"))
@@ -87,20 +84,7 @@ func (h Handler) GetConfig(c echo.Context) error {
 	return c.JSON(http.StatusOK, config)
 }
 
-type TaxCSV struct {
-	TotalIncome    float64  `csv:"totalIncome" validate:"required,numeric,gte=0"`
-	WithHoldingTax *float64 `csv:"wht" validate:"gte=0"`
-	Donation       *float64 `csv:"donation" validate:"gte=0"`
-}
-
-func (t TaxCSV) CalculateTax(c config.Config) calculator.CalculateTaxResponse {
-	return calculator.CalculateTax(calculator.CalculateTaxBody{TotalIncome: t.TotalIncome,
-		WithHoldingTax: *t.WithHoldingTax,
-		Allowances:     []calculator.Allowance{{Type: config.AllowanceType.Donation, Amount: *t.Donation}}},
-		c)
-}
-
-func (h Handler) CalculateByCsv(c echo.Context) error {
+func (h Handler) CalculateByCsvHandler(c echo.Context) error {
 	file, err := c.FormFile("taxes.csv")
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, helper.ErrorRes("invalid request"))
@@ -121,7 +105,7 @@ func (h Handler) CalculateByCsv(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, helper.ErrorRes(err.Error()))
 	}
 
-	var records []TaxCSV
+	var records []calc.TaxCSV
 	if err := i.unmarshal(&records); err != nil {
 		fmt.Println("🚀 | file: handler.go | line 119 | iferr:=i.unmarshal | err : ", err)
 		return c.JSON(http.StatusBadRequest, helper.ErrorRes("invalid request"))
@@ -134,44 +118,11 @@ func (h Handler) CalculateByCsv(c echo.Context) error {
 		}
 	}
 
-	return c.JSON(http.StatusOK, records)
-}
-
-type TaxCSVInstance struct {
-	File multipart.File
-}
-
-func (ti TaxCSVInstance) validate() error {
-	rows, err := gocsv.LazyCSVReader(ti.File).ReadAll()
+	config, err := h.DB.GetConfig()
 	if err != nil {
-		return err
+		return c.JSON(http.StatusInternalServerError, helper.ErrorRes("Oops, something went wrong"))
 	}
 
-	header := rows[0]
-	expectedHeaders := []string{"totalIncome", "wht", "donation"}
-
-	for i, h := range header {
-		if h != expectedHeaders[i] {
-			return fmt.Errorf("wrong csv format")
-		}
-	}
-
-	for _, row := range rows {
-		for _, value := range row {
-			if strings.TrimSpace(value) == "" {
-				return fmt.Errorf("wrong csv format")
-			}
-		}
-	}
-	// Rewind to the beginning of csv, So the `t.File` can be read again
-	ti.File.Seek(0, 0)
-	return nil
-}
-
-func (t TaxCSVInstance) unmarshal(s interface{}) error {
-	if err := gocsv.UnmarshalMultipartFile(&t.File, s); err != nil {
-		return err
-	}
-
-	return nil
+	res := calc.CalculateTaxByCsv(records, config)
+	return c.JSON(http.StatusOK, calc.CalculateByCSVResponse{Taxes: res})
 }
