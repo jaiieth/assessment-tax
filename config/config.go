@@ -1,16 +1,23 @@
 package config
 
-import (
-	"database/sql"
-)
-
 type Config struct {
 	PersonalDeduction float64 `postgres:"personal_deduction" json:"personalDeduction"`
 	MaxDonation       float64 `postgres:"max_donation" json:"maxDonation"`
 }
 
-type Postgres struct {
-	Db *sql.DB
+const (
+	DEFAULT_PERSONAL_DEDUCTION = 60000.0
+	MAX_PERSONAL_DEDUCTION     = 100000.0
+	MIN_PERSONAL_DEDUCTION     = 10000.0
+	MAX_DONATION               = 100000.0
+)
+
+var AllowanceType = struct {
+	Donation string
+	KReceipt string
+}{
+	Donation: "donation",
+	KReceipt: "k-receipt",
 }
 
 func (p *Postgres) GetConfig() (c Config, err error) {

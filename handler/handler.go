@@ -8,9 +8,9 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gocarina/gocsv"
+	"github.com/jaiieth/assessment-tax/config"
 	"github.com/jaiieth/assessment-tax/handler/calculator"
 	"github.com/jaiieth/assessment-tax/helper"
-	"github.com/jaiieth/assessment-tax/postgres/config"
 	"github.com/labstack/echo/v4"
 )
 
@@ -91,6 +91,13 @@ type TaxCSV struct {
 	TotalIncome    float64  `csv:"totalIncome" validate:"required,numeric,gte=0"`
 	WithHoldingTax *float64 `csv:"wht" validate:"gte=0"`
 	Donation       *float64 `csv:"donation" validate:"gte=0"`
+}
+
+func (t TaxCSV) CalculateTax(c config.Config) calculator.CalculateTaxResponse {
+	return calculator.CalculateTax(calculator.CalculateTaxBody{TotalIncome: t.TotalIncome,
+		WithHoldingTax: *t.WithHoldingTax,
+		Allowances:     []calculator.Allowance{{Type: config.AllowanceType.Donation, Amount: *t.Donation}}},
+		c)
 }
 
 func (h Handler) CalculateByCsv(c echo.Context) error {

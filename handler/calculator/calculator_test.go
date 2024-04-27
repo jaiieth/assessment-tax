@@ -9,10 +9,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jaiieth/assessment-tax/config"
 	"github.com/jaiieth/assessment-tax/handler"
 	"github.com/jaiieth/assessment-tax/handler/calculator"
 	"github.com/jaiieth/assessment-tax/helper"
-	"github.com/jaiieth/assessment-tax/postgres/config"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -137,7 +137,7 @@ func TestCalculateTaxWithAlloawance(t *testing.T) {
 			body: calculator.CalculateTaxBody{
 				TotalIncome: 500000,
 				Allowances: []calculator.Allowance{{
-					Type:   calculator.Donation,
+					Type:   "donation",
 					Amount: 50000}}},
 		},
 		{
@@ -146,7 +146,7 @@ func TestCalculateTaxWithAlloawance(t *testing.T) {
 			body: calculator.CalculateTaxBody{
 				TotalIncome: 500000,
 				Allowances: []calculator.Allowance{{
-					Type:   calculator.Donation,
+					Type:   "donation",
 					Amount: 100000}}},
 		},
 		{
@@ -155,7 +155,7 @@ func TestCalculateTaxWithAlloawance(t *testing.T) {
 			body: calculator.CalculateTaxBody{
 				TotalIncome: 500000,
 				Allowances: []calculator.Allowance{{
-					Type:   calculator.Donation,
+					Type:   "donation",
 					Amount: 100001}}},
 		},
 		// {

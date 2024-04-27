@@ -3,13 +3,17 @@ package calculator
 import (
 	"math"
 
-	"github.com/jaiieth/assessment-tax/postgres/config"
+	"github.com/jaiieth/assessment-tax/config"
 )
 
 type CalculateTaxBody struct {
 	TotalIncome    float64     `json:"totalIncome" validate:"required,gte=0"`
 	WithHoldingTax float64     `json:"wht" validate:"gte=0"`
 	Allowances     []Allowance `json:"allowances" validate:"unique=Type,dive"`
+}
+
+type SetPersonalDeductionBody struct {
+	Amount float64 `json:"amount" validate:"gte=0"`
 }
 
 type Allowance struct {
@@ -21,23 +25,11 @@ type TaxLevel struct {
 	Level string  `json:"level"`
 	Tax   float64 `json:"tax"`
 }
+
 type CalculateTaxResponse struct {
 	Tax       float64    `json:"tax"`
 	TaxLevel  []TaxLevel `json:"taxLevel,omitempty"`
 	TaxRefund float64    `json:"taxRefund,omitempty"`
-}
-
-type SetPersonalDeductionBody struct {
-	Amount float64 `json:"amount" validate:"gte=0"`
-}
-
-const (
-	Donation = "donation"
-	KReceipt = "k-receipt"
-)
-
-var AllowanceType = []string{
-	Donation, KReceipt,
 }
 
 func GetTotalTax(taxable float64) float64 {
@@ -79,7 +71,7 @@ func getDonationAllowance(allowances []Allowance) float64 {
 	maxDonation := config.MAX_DONATION
 
 	for _, a := range allowances {
-		if a.Type == Donation {
+		if a.Type == config.AllowanceType.Donation {
 			donation += a.Amount
 		}
 	}
