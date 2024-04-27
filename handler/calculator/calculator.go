@@ -16,6 +16,10 @@ type SetPersonalDeductionBody struct {
 	Amount float64 `json:"amount" validate:"gte=0"`
 }
 
+type SetMaxKReceiptBody struct {
+	Amount float64 `json:"amount" validate:"gte=0"`
+}
+
 type Allowance struct {
 	Type   string  `json:"allowanceType"  example:"donation" validate:"required,oneof=donation k-receipt"`
 	Amount float64 `json:"amount" validate:"gte=0"`
@@ -99,7 +103,7 @@ func calculateAllowance(allowances []Allowance) (allowance float64) {
 	}
 
 	allowance += math.Min(donation, config.MAX_DONATION)
-	allowance += math.Min(kReceipt, config.DEFAULT_K_RECEIPT)
+	allowance += math.Min(kReceipt, config.DEFAULT_MAX_K_RECEIPT)
 
 	return allowance
 }

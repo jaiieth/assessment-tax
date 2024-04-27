@@ -39,6 +39,9 @@ func (db StubDatabase) GetConfig() (config.Config, error) {
 func (db StubDatabase) SetPersonalDeduction(float64) (config.Config, error) {
 	return db.Config, nil
 }
+func (db StubDatabase) SetMaxKReceipt(float64) (config.Config, error) {
+	return db.Config, nil
+}
 
 func NewContext(method string, target string, body io.Reader) (echo.Context, *httptest.ResponseRecorder) {
 	e := echo.New()

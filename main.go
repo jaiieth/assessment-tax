@@ -32,6 +32,7 @@ func main() {
 	e.POST("/tax/calculations/upload-csv", h.CalculateByCsvHandler)
 
 	admin.POST("/deductions/personal", h.SetPersonalDeductionHandler)
+	admin.POST("/deductions/k-receipt", h.SetMaxKReceiptHandler)
 
 	e.Logger.Fatal(e.Start(":1323"))
 }

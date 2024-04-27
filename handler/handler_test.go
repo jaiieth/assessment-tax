@@ -110,7 +110,11 @@ type mockDB struct {
 func (m *mockDB) GetConfig() (config.Config, error) {
 	return m.Config, m.Error
 }
-func (m *mockDB) SetPersonalDeduction(float64) (config.Config, error) {
+func (m *mockDB) SetPersonalDeduction(n float64) (config.Config, error) {
+	m.Called(n)
+	return m.Config, nil
+}
+func (m *mockDB) SetMaxKReceipt(n float64) (config.Config, error) {
 	m.Called()
 	return m.Config, nil
 }
