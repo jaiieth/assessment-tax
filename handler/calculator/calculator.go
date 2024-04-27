@@ -2,12 +2,18 @@ package calculator
 
 import (
 	"math"
+
+	"github.com/jaiieth/assessment-tax/config"
 )
 
 type CalculateTaxBody struct {
 	TotalIncome    float64     `json:"totalIncome" validate:"required,gte=0"`
 	WithHoldingTax float64     `json:"wht" validate:"gte=0"`
 	Allowances     []Allowance `json:"allowances" validate:"unique=Type,dive"`
+}
+
+type SetPersonalDeductionBody struct {
+	Amount float64 `json:"amount" validate:"gte=0"`
 }
 
 type Allowance struct {
@@ -19,36 +25,48 @@ type TaxLevel struct {
 	Level string  `json:"level"`
 	Tax   float64 `json:"tax"`
 }
-type CalculateTaxResponse struct {
+
+type CalculateTaxResult struct {
 	Tax       float64    `json:"tax"`
 	TaxLevel  []TaxLevel `json:"taxLevel,omitempty"`
 	TaxRefund float64    `json:"taxRefund,omitempty"`
 }
 
-const (
-	Donation = "donation"
-	KReceipt = "k-receipt"
-)
-
-var AllowanceType = []string{
-	Donation, KReceipt,
+type TaxCSV struct {
+	TotalIncome    float64  `csv:"totalIncome" validate:"required,numeric,gte=0"`
+	WithHoldingTax *float64 `csv:"wht" validate:"gte=0"`      //use pointer to allow 0
+	Donation       *float64 `csv:"donation" validate:"gte=0"` // use pointer to allow 0
 }
 
+type CalculateByCSVResponse struct {
+	Taxes []CalculateByCSVResponseItem `json:"taxes"`
+}
+
+type CalculateByCSVResponseItem struct {
+	TotalIncome float64 `json:"totalIncome"`
+	Tax         float64 `json:"tax"`
+	TaxRefund   float64 `json:"taxRefund,omitempty"`
+}
+
+func roundTwoDigits(x float64) float64 {
+	return math.Round(x*100) / 100
+}
 func GetTotalTax(taxable float64) float64 {
+
 	if taxable > 2000000 {
-		return ((taxable - 2000000) * 0.35) + GetTotalTax(2000000)
+		return roundTwoDigits((taxable-2000000)*0.35) + GetTotalTax(2000000)
 	}
 
 	if taxable > 1000000 {
-		return ((taxable - 1000000) * 0.20) + GetTotalTax(1000000)
+		return roundTwoDigits((taxable-1000000)*0.20) + GetTotalTax(1000000)
 	}
 
 	if taxable > 500000 {
-		return ((taxable - 500000) * 0.15) + GetTotalTax(500000)
+		return roundTwoDigits((taxable-500000)*0.15) + GetTotalTax(500000)
 	}
 
 	if taxable > 150000 {
-		return ((taxable - 150000) * 0.10) + GetTotalTax(150000)
+		return roundTwoDigits((taxable-150000)*0.10) + GetTotalTax(150000)
 	}
 
 	return 0.0
@@ -68,29 +86,41 @@ func GetTaxLevels(taxable float64) (taxLevel []TaxLevel) {
 	return taxLevel
 }
 
-func getDonationAllowance(allowances []Allowance) float64 {
-	donation := 0.0
-	maxDonation := 100000.0
-
+func getDonationAllowance(allowances []Allowance) (donation float64) {
 	for _, a := range allowances {
-		if a.Type == Donation {
+		if a.Type == config.AllowanceType.Donation {
 			donation += a.Amount
 		}
 	}
 
-	return math.Min(donation, maxDonation)
+	return math.Min(donation, config.MAX_DONATION)
 }
 
-func CalculateTax(b CalculateTaxBody, c Config) CalculateTaxResponse {
+func CalculateTax(b CalculateTaxBody, c config.Config) CalculateTaxResult {
 	allowance := getDonationAllowance(b.Allowances)
 
 	tax := GetTotalTax(b.TotalIncome-c.PersonalDeduction-allowance) - b.WithHoldingTax
-	roundedTax := math.Round(tax*100) / 100
 	var taxLevel []TaxLevel
 	if tax < 0 {
-		return CalculateTaxResponse{0, taxLevel, math.Abs(roundedTax)}
+		return CalculateTaxResult{0, taxLevel, math.Abs(tax)}
 	}
 
 	taxLevel = GetTaxLevels(b.TotalIncome - allowance - c.PersonalDeduction)
-	return CalculateTaxResponse{math.Max(0, roundedTax), taxLevel, 0}
+	return CalculateTaxResult{math.Max(0, tax), taxLevel, 0}
+}
+
+func CalculateTaxes(rs []TaxCSV, c config.Config) []CalculateByCSVResponseItem {
+	res := []CalculateByCSVResponseItem{}
+	for _, r := range rs {
+		allowance := math.Min(*r.Donation, config.MAX_DONATION)
+		tax := GetTotalTax(r.TotalIncome-c.PersonalDeduction-allowance) - *r.WithHoldingTax
+		if tax < 0 {
+			res = append(res, CalculateByCSVResponseItem{r.TotalIncome, 0, math.Abs(tax)})
+			continue
+		}
+
+		res = append(res, CalculateByCSVResponseItem{r.TotalIncome, tax, 0})
+	}
+
+	return res
 }

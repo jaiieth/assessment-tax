@@ -2,17 +2,16 @@ package calculator_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/jaiieth/assessment-tax/config"
 	"github.com/jaiieth/assessment-tax/handler"
 	"github.com/jaiieth/assessment-tax/handler/calculator"
 	"github.com/jaiieth/assessment-tax/helper"
-	"github.com/jaiieth/assessment-tax/postgres"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -30,14 +29,14 @@ type CalculateTaxWithAllowanceCases struct {
 }
 
 type StubDatabase struct {
-	Config calculator.Config
+	Config config.Config
 	err    error
 }
 
-func (db StubDatabase) GetConfig() (calculator.Config, error) {
+func (db StubDatabase) GetConfig() (config.Config, error) {
 	return db.Config, nil
 }
-func (db StubDatabase) SetPersonalDeduction(float64) (calculator.Config, error) {
+func (db StubDatabase) SetPersonalDeduction(float64) (config.Config, error) {
 	return db.Config, nil
 }
 
@@ -56,7 +55,6 @@ func RunTestGetTotalTax(t *testing.T, cases []GetTotalTaxCases) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			tax := calculator.GetTotalTax(c.input)
-			fmt.Println("🚀 | file: calculator_test.go | line 70 | t.Run | tax : ", tax)
 			assert.Equal(t, c.expectedTax, tax)
 		})
 	}
@@ -87,7 +85,7 @@ func TestCalculateTax(t *testing.T) {
 
 		res := calculator.CalculateTax(
 			body,
-			calculator.Config{PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION})
+			config.Config{PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION})
 
 		assert.Equal(t, 0.0, res.Tax)
 		assert.Equal(t, 50000.0, res.TaxRefund)
@@ -100,7 +98,7 @@ func TestCalculateTax(t *testing.T) {
 
 		res := calculator.CalculateTax(
 			body,
-			calculator.Config{PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION})
+			config.Config{PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION})
 		assert.Equal(t, 29000.0, res.Tax)
 	})
 
@@ -112,7 +110,7 @@ func TestCalculateTax(t *testing.T) {
 
 		res := calculator.CalculateTax(
 			body,
-			calculator.Config{PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION})
+			config.Config{PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION})
 		assert.Equal(t, 4000.0, res.Tax)
 	})
 }
@@ -123,7 +121,7 @@ func RunTestCalculateTaxWithAlloawance(t *testing.T, cases []CalculateTaxWithAll
 		t.Run(v.name, func(t *testing.T) {
 			res := calculator.CalculateTax(
 				v.body,
-				calculator.Config{PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION})
+				config.Config{PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION})
 			assert.Equal(t, v.expectedTax, res.Tax)
 		})
 	}
@@ -137,7 +135,7 @@ func TestCalculateTaxWithAlloawance(t *testing.T) {
 			body: calculator.CalculateTaxBody{
 				TotalIncome: 500000,
 				Allowances: []calculator.Allowance{{
-					Type:   calculator.Donation,
+					Type:   "donation",
 					Amount: 50000}}},
 		},
 		{
@@ -146,7 +144,7 @@ func TestCalculateTaxWithAlloawance(t *testing.T) {
 			body: calculator.CalculateTaxBody{
 				TotalIncome: 500000,
 				Allowances: []calculator.Allowance{{
-					Type:   calculator.Donation,
+					Type:   "donation",
 					Amount: 100000}}},
 		},
 		{
@@ -155,7 +153,7 @@ func TestCalculateTaxWithAlloawance(t *testing.T) {
 			body: calculator.CalculateTaxBody{
 				TotalIncome: 500000,
 				Allowances: []calculator.Allowance{{
-					Type:   calculator.Donation,
+					Type:   "donation",
 					Amount: 100001}}},
 		},
 		// {
@@ -190,11 +188,11 @@ func TestCalculationHandler(t *testing.T) {
 
 		stubHander := handler.New(
 			StubDatabase{
-				Config: calculator.Config{
-					PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION,
+				Config: config.Config{
+					PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION,
 				}})
 
-		err := stubHander.CalculateTax(c)
+		err := stubHander.CalculateTaxHandler(c)
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
@@ -210,11 +208,11 @@ func TestCalculationHandler(t *testing.T) {
 
 		stubHander := handler.New(
 			StubDatabase{
-				Config: calculator.Config{
-					PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION,
+				Config: config.Config{
+					PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION,
 				}})
 
-		err := stubHander.CalculateTax(c)
+		err := stubHander.CalculateTaxHandler(c)
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -230,11 +228,11 @@ func TestCalculationHandler(t *testing.T) {
 
 		stubHander := handler.New(
 			StubDatabase{
-				Config: calculator.Config{
-					PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION,
+				Config: config.Config{
+					PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION,
 				}})
 
-		err := stubHander.CalculateTax(c)
+		err := stubHander.CalculateTaxHandler(c)
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -265,11 +263,11 @@ func TestCalculationHandler(t *testing.T) {
 
 		stubHander := handler.New(
 			StubDatabase{
-				Config: calculator.Config{
-					PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION,
+				Config: config.Config{
+					PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION,
 				}})
 
-		err := stubHander.CalculateTax(c)
+		err := stubHander.CalculateTaxHandler(c)
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -300,5 +298,68 @@ func TestGetTaxLevel(t *testing.T) {
 		assert.LessOrEqual(t, 35000.0, taxLevels[1].Tax)
 		assert.LessOrEqual(t, 75000.0, taxLevels[2].Tax)
 		assert.LessOrEqual(t, 200000.0, taxLevels[3].Tax)
+	})
+}
+
+func TestCalculateTaxes(t *testing.T) {
+	t.Run("Income below tax threshold should return income, 0 tax and 0 refund", func(t *testing.T) {
+		rs := []calculator.TaxCSV{
+			{TotalIncome: 150000, Donation: new(float64), WithHoldingTax: new(float64)},
+		}
+		c := config.Config{
+			PersonalDeduction: 0,
+		}
+		expected := []calculator.CalculateByCSVResponseItem{
+			{TotalIncome: 150000},
+		}
+
+		result := calculator.CalculateTaxes(rs, c)
+
+		assert.Equal(t, expected, result)
+	})
+	t.Run("Income below tax threshold and wht should return 0 tax and tax refund", func(t *testing.T) {
+		wht := 10000.0
+		rs := []calculator.TaxCSV{
+			{TotalIncome: 100000, Donation: new(float64), WithHoldingTax: &wht},
+		}
+		c := config.Config{
+			PersonalDeduction: 0,
+		}
+		expected := []calculator.CalculateByCSVResponseItem{
+			{TotalIncome: 100000, Tax: 0, TaxRefund: 10000.0},
+		}
+
+		result := calculator.CalculateTaxes(rs, c)
+
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Income above tax threshold equal to donation should return 0 tax", func(t *testing.T) {
+		donation := 60000.0
+		rs := []calculator.TaxCSV{
+			{TotalIncome: 210000, Donation: &donation, WithHoldingTax: new(float64)},
+		}
+		c := config.Config{}
+		expected := []calculator.CalculateByCSVResponseItem{
+			{TotalIncome: 210000, Tax: 0},
+		}
+
+		result := calculator.CalculateTaxes(rs, c)
+
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Multiple csv rows , should return all rows", func(t *testing.T) {
+		rs := []calculator.TaxCSV{
+			{TotalIncome: 100000, Donation: new(float64), WithHoldingTax: new(float64)},
+			{TotalIncome: 100000, Donation: new(float64), WithHoldingTax: new(float64)},
+			{TotalIncome: 100000, Donation: new(float64), WithHoldingTax: new(float64)},
+		}
+		c := config.Config{PersonalDeduction: 0}
+		expected := len(rs)
+
+		result := calculator.CalculateTaxes(rs, c)
+
+		assert.Equal(t, expected, len(result))
 	})
 }
