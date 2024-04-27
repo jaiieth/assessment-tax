@@ -25,11 +25,13 @@ func main() {
 	})
 
 	h := handler.New(db)
+	admin := e.Group("/admin", middleware.Auth)
 
 	e.GET("/tax/config", h.GetConfigHandler)
 	e.POST("/tax/calculations", h.CalculateTaxHandler)
 	e.POST("/tax/calculations/upload-csv", h.CalculateByCsvHandler)
-	e.POST("/admin/deductions/personal", h.SetPersonalDeductionHandler)
+
+	admin.POST("/deductions/personal", h.SetPersonalDeductionHandler)
 
 	e.Logger.Fatal(e.Start(":1323"))
 }
