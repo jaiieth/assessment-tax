@@ -25,10 +25,12 @@ func main() {
 	})
 
 	h := handler.New(db)
+	admin := e.Group("/admin", middleware.Auth)
 
 	e.GET("/tax/config", h.GetConfig)
 	e.POST("/tax/calculations", h.CalculateTax)
-	e.POST("/admin/deductions/personal", h.SetPersonalDeduction)
+
+	admin.POST("/deductions/personal", h.SetPersonalDeduction)
 
 	e.Logger.Fatal(e.Start(":1323"))
 }
