@@ -28,6 +28,7 @@ func main() {
 
 	e.GET("/tax/config", h.GetConfig)
 	e.POST("/tax/calculations", h.CalculateTax)
+	e.POST("/tax/calculations/upload-csv", h.CalculateByCsv)
 	e.POST("/admin/deductions/personal", h.SetPersonalDeduction)
 
 	e.Logger.Fatal(e.Start(":1323"))

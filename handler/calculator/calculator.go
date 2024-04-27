@@ -2,6 +2,8 @@ package calculator
 
 import (
 	"math"
+
+	"github.com/jaiieth/assessment-tax/postgres/config"
 )
 
 type CalculateTaxBody struct {
@@ -23,6 +25,10 @@ type CalculateTaxResponse struct {
 	Tax       float64    `json:"tax"`
 	TaxLevel  []TaxLevel `json:"taxLevel,omitempty"`
 	TaxRefund float64    `json:"taxRefund,omitempty"`
+}
+
+type SetPersonalDeductionBody struct {
+	Amount float64 `json:"amount" validate:"gte=0"`
 }
 
 const (
@@ -70,7 +76,7 @@ func GetTaxLevels(taxable float64) (taxLevel []TaxLevel) {
 
 func getDonationAllowance(allowances []Allowance) float64 {
 	donation := 0.0
-	maxDonation := 100000.0
+	maxDonation := config.MAX_DONATION
 
 	for _, a := range allowances {
 		if a.Type == Donation {
@@ -81,7 +87,7 @@ func getDonationAllowance(allowances []Allowance) float64 {
 	return math.Min(donation, maxDonation)
 }
 
-func CalculateTax(b CalculateTaxBody, c Config) CalculateTaxResponse {
+func CalculateTax(b CalculateTaxBody, c config.Config) CalculateTaxResponse {
 	allowance := getDonationAllowance(b.Allowances)
 
 	tax := GetTotalTax(b.TotalIncome-c.PersonalDeduction-allowance) - b.WithHoldingTax

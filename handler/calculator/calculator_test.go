@@ -12,7 +12,7 @@ import (
 	"github.com/jaiieth/assessment-tax/handler"
 	"github.com/jaiieth/assessment-tax/handler/calculator"
 	"github.com/jaiieth/assessment-tax/helper"
-	"github.com/jaiieth/assessment-tax/postgres"
+	"github.com/jaiieth/assessment-tax/postgres/config"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -30,14 +30,14 @@ type CalculateTaxWithAllowanceCases struct {
 }
 
 type StubDatabase struct {
-	Config calculator.Config
+	Config config.Config
 	err    error
 }
 
-func (db StubDatabase) GetConfig() (calculator.Config, error) {
+func (db StubDatabase) GetConfig() (config.Config, error) {
 	return db.Config, nil
 }
-func (db StubDatabase) SetPersonalDeduction(float64) (calculator.Config, error) {
+func (db StubDatabase) SetPersonalDeduction(float64) (config.Config, error) {
 	return db.Config, nil
 }
 
@@ -87,7 +87,7 @@ func TestCalculateTax(t *testing.T) {
 
 		res := calculator.CalculateTax(
 			body,
-			calculator.Config{PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION})
+			config.Config{PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION})
 
 		assert.Equal(t, 0.0, res.Tax)
 		assert.Equal(t, 50000.0, res.TaxRefund)
@@ -100,7 +100,7 @@ func TestCalculateTax(t *testing.T) {
 
 		res := calculator.CalculateTax(
 			body,
-			calculator.Config{PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION})
+			config.Config{PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION})
 		assert.Equal(t, 29000.0, res.Tax)
 	})
 
@@ -112,7 +112,7 @@ func TestCalculateTax(t *testing.T) {
 
 		res := calculator.CalculateTax(
 			body,
-			calculator.Config{PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION})
+			config.Config{PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION})
 		assert.Equal(t, 4000.0, res.Tax)
 	})
 }
@@ -123,7 +123,7 @@ func RunTestCalculateTaxWithAlloawance(t *testing.T, cases []CalculateTaxWithAll
 		t.Run(v.name, func(t *testing.T) {
 			res := calculator.CalculateTax(
 				v.body,
-				calculator.Config{PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION})
+				config.Config{PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION})
 			assert.Equal(t, v.expectedTax, res.Tax)
 		})
 	}
@@ -190,8 +190,8 @@ func TestCalculationHandler(t *testing.T) {
 
 		stubHander := handler.New(
 			StubDatabase{
-				Config: calculator.Config{
-					PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION,
+				Config: config.Config{
+					PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION,
 				}})
 
 		err := stubHander.CalculateTax(c)
@@ -210,8 +210,8 @@ func TestCalculationHandler(t *testing.T) {
 
 		stubHander := handler.New(
 			StubDatabase{
-				Config: calculator.Config{
-					PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION,
+				Config: config.Config{
+					PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION,
 				}})
 
 		err := stubHander.CalculateTax(c)
@@ -230,8 +230,8 @@ func TestCalculationHandler(t *testing.T) {
 
 		stubHander := handler.New(
 			StubDatabase{
-				Config: calculator.Config{
-					PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION,
+				Config: config.Config{
+					PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION,
 				}})
 
 		err := stubHander.CalculateTax(c)
@@ -265,8 +265,8 @@ func TestCalculationHandler(t *testing.T) {
 
 		stubHander := handler.New(
 			StubDatabase{
-				Config: calculator.Config{
-					PersonalDeduction: postgres.DEFAULT_PERSONAL_DEDUCTION,
+				Config: config.Config{
+					PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION,
 				}})
 
 		err := stubHander.CalculateTax(c)

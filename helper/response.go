@@ -11,3 +11,7 @@ type CalculateResponse struct {
 	Tax       float64 `json:"tax"`
 	TaxRefund float64 `json:"taxRefund,omitempty"`
 }
+
+func ErrorRes(m string) ErrorResponse {
+	return ErrorResponse{Message: m}
+}

@@ -22,6 +22,7 @@ require (
 
 require (
 	github.com/go-playground/validator/v10 v10.19.0
+	github.com/gocarina/gocsv v0.0.0-20231116093920-b87c2d0e983a
 	github.com/labstack/echo v3.3.10+incompatible
 	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/lib/pq v1.10.9
