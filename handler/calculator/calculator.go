@@ -1,7 +1,6 @@
 package calculator
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/jaiieth/assessment-tax/config"
@@ -9,7 +8,7 @@ import (
 
 type CalculateTaxBody struct {
 	TotalIncome    float64     `json:"totalIncome" validate:"required,gte=0"`
-	WithHoldingTax float64     `json:"wht" validate:"gte=0"`
+	WithHoldingTax float64     `json:"wht" validate:"gte=0,ltefield=TotalIncome"`
 	Allowances     []Allowance `json:"allowances" validate:"unique=Type,dive"`
 }
 
@@ -35,8 +34,8 @@ type CalculateTaxResult struct {
 
 type TaxCSV struct {
 	TotalIncome    float64  `csv:"totalIncome" validate:"required,numeric,gte=0"`
-	WithHoldingTax *float64 `csv:"wht" validate:"gte=0"`      //use pointer to allow 0
-	Donation       *float64 `csv:"donation" validate:"gte=0"` // use pointer to allow 0
+	WithHoldingTax *float64 `csv:"wht" validate:"gte=0,ltefield=TotalIncome"` //use pointer to allow 0
+	Donation       *float64 `csv:"donation" validate:"gte=0"`                 // use pointer to allow 0
 }
 
 type CalculateByCSVResponse struct {
@@ -107,8 +106,6 @@ func calculateAllowance(allowances []Allowance) (allowance float64) {
 
 func CalculateTax(b CalculateTaxBody, c config.Config) CalculateTaxResult {
 	allowance := calculateAllowance(b.Allowances)
-	fmt.Println("🚀 | file: calculator.go | line 109 | funcCalculateTax | allowance : ", allowance)
-	fmt.Printf("c.PersonalDeduction: %v\n", c.PersonalDeduction)
 	tax := GetTotalTax(b.TotalIncome-c.PersonalDeduction-allowance) - b.WithHoldingTax
 	var taxLevel []TaxLevel
 	if tax < 0 {
