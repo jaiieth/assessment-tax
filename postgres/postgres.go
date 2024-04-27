@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/joho/godotenv"
+
 	_ "github.com/lib/pq"
 )
 
@@ -13,6 +14,7 @@ type Postgres struct {
 }
 
 func New() (*Postgres, error) {
+	godotenv.Load()
 	var env map[string]string
 	env, err := godotenv.Read()
 

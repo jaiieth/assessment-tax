@@ -52,6 +52,7 @@ func (h Handler) CalculateTax(c echo.Context) error {
 }
 
 func (h Handler) SetPersonalDeduction(c echo.Context) error {
+
 	var body calculator.PersonalDeductionBody
 	if err := c.Bind(&body); err != nil {
 		return c.JSON(http.StatusBadRequest, helper.ErrorResponse{Message: "invalid request"})
