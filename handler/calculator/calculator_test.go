@@ -156,15 +156,43 @@ func TestCalculateTaxWithAlloawance(t *testing.T) {
 					Type:   "donation",
 					Amount: 100001}}},
 		},
-		// {
-		// 	name:        "Given income 500,000 with 2 donations should return tax:19,000",
-		// 	expectedTax: 19000.0,
-		// 	body: calculator.CalculateTaxBody{
-		// 		TotalIncome: 500000,
-		// 		Allowances: []calculator.Allowance{{
-		// 			Type:   calculator.Donation,
-		// 			Amount: 100001}}},
-		// },
+		{
+			name:        "Given income 500,000 with 2 donations > 100,001 should return tax:19,000",
+			expectedTax: 19000.0,
+			body: calculator.CalculateTaxBody{
+				TotalIncome: 500000,
+				Allowances: []calculator.Allowance{
+					{Type: "donation", Amount: 100000},
+					{Type: "donation", Amount: 1},
+				}},
+		},
+		{
+			name:        "Given income 500,000 with 10,000 k-receipt should return tax:28,000",
+			expectedTax: 28000.0,
+			body: calculator.CalculateTaxBody{
+				TotalIncome: 500000,
+				Allowances: []calculator.Allowance{
+					{Type: "k-receipt", Amount: 10000},
+				}},
+		},
+		{
+			name:        "Given income 500,000 with 50,000 k-receipt should return tax:24,000",
+			expectedTax: 24000.0,
+			body: calculator.CalculateTaxBody{
+				TotalIncome: 500000,
+				Allowances: []calculator.Allowance{
+					{Type: "k-receipt", Amount: 50000},
+				}},
+		},
+		{
+			name:        "Given income 500,000 with 100,000 k-receipt should return tax:24,000",
+			expectedTax: 24000.0,
+			body: calculator.CalculateTaxBody{
+				TotalIncome: 500000,
+				Allowances: []calculator.Allowance{
+					{Type: "k-receipt", Amount: 100000},
+				}},
+		},
 	}
 
 	RunTestCalculateTaxWithAlloawance(t, cases)
