@@ -1,6 +1,7 @@
 package calculator
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/jaiieth/assessment-tax/config"
@@ -86,19 +87,28 @@ func GetTaxLevels(taxable float64) (taxLevel []TaxLevel) {
 	return taxLevel
 }
 
-func getDonationAllowance(allowances []Allowance) (donation float64) {
+func calculateAllowance(allowances []Allowance) (allowance float64) {
+	donation := 0.0
+	kReceipt := 0.0
 	for _, a := range allowances {
 		if a.Type == config.AllowanceType.Donation {
 			donation += a.Amount
 		}
+		if a.Type == config.AllowanceType.KReceipt {
+			kReceipt += a.Amount
+		}
 	}
 
-	return math.Min(donation, config.MAX_DONATION)
+	allowance += math.Min(donation, config.MAX_DONATION)
+	allowance += math.Min(kReceipt, config.DEFAULT_K_RECEIPT)
+
+	return allowance
 }
 
 func CalculateTax(b CalculateTaxBody, c config.Config) CalculateTaxResult {
-	allowance := getDonationAllowance(b.Allowances)
-
+	allowance := calculateAllowance(b.Allowances)
+	fmt.Println("🚀 | file: calculator.go | line 109 | funcCalculateTax | allowance : ", allowance)
+	fmt.Printf("c.PersonalDeduction: %v\n", c.PersonalDeduction)
 	tax := GetTotalTax(b.TotalIncome-c.PersonalDeduction-allowance) - b.WithHoldingTax
 	var taxLevel []TaxLevel
 	if tax < 0 {

@@ -45,7 +45,6 @@ func (h Handler) CalculateTaxHandler(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, helper.ErrorRes("Oops, something went wrong"))
 	}
 
-	fmt.Println("🚀 | file: handler.go | line 44 | func | config : ", config)
 	res := calc.CalculateTax(body, config)
 
 	return c.JSON(http.StatusOK, res)
@@ -93,7 +92,6 @@ func (h Handler) CalculateByCsvHandler(c echo.Context) error {
 
 	src, err := file.Open()
 	if err != nil {
-		fmt.Println("🚀 | file: handler.go | line 105 | func | err : ", err)
 		return c.JSON(http.StatusBadRequest, helper.ErrorRes("invalid request"))
 	}
 	defer src.Close()
@@ -102,19 +100,16 @@ func (h Handler) CalculateByCsvHandler(c echo.Context) error {
 
 	err = i.validate()
 	if err != nil {
-		fmt.Println("🚀 | file: handler.go | line 113 | func | err : ", err)
 		return c.JSON(http.StatusBadRequest, helper.ErrorRes(err.Error()))
 	}
 
 	var records []calc.TaxCSV
 	if err := i.unmarshal(&records); err != nil {
-		fmt.Println("🚀 | file: handler.go | line 119 | iferr:=i.unmarshal | err : ", err)
 		return c.JSON(http.StatusBadRequest, helper.ErrorRes("invalid request"))
 	}
 
 	for _, r := range records {
 		if err := validate.Struct(r); err != nil {
-			fmt.Println("🚀 | file: handler.go | line 125 | func | err : ", err)
 			return c.JSON(http.StatusBadRequest, helper.ErrorRes("invalid request"))
 		}
 	}
