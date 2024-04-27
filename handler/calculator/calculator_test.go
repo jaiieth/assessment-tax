@@ -300,3 +300,66 @@ func TestGetTaxLevel(t *testing.T) {
 		assert.LessOrEqual(t, 200000.0, taxLevels[3].Tax)
 	})
 }
+
+func TestCalculateTaxes(t *testing.T) {
+	t.Run("Income below tax threshold should return income, 0 tax and 0 refund", func(t *testing.T) {
+		rs := []calculator.TaxCSV{
+			{TotalIncome: 150000, Donation: new(float64), WithHoldingTax: new(float64)},
+		}
+		c := config.Config{
+			PersonalDeduction: 0,
+		}
+		expected := []calculator.CalculateByCSVResponseItem{
+			{TotalIncome: 150000},
+		}
+
+		result := calculator.CalculateTaxes(rs, c)
+
+		assert.Equal(t, expected, result)
+	})
+	t.Run("Income below tax threshold and wht should return 0 tax and tax refund", func(t *testing.T) {
+		wht := 10000.0
+		rs := []calculator.TaxCSV{
+			{TotalIncome: 100000, Donation: new(float64), WithHoldingTax: &wht},
+		}
+		c := config.Config{
+			PersonalDeduction: 0,
+		}
+		expected := []calculator.CalculateByCSVResponseItem{
+			{TotalIncome: 100000, Tax: 0, TaxRefund: 10000.0},
+		}
+
+		result := calculator.CalculateTaxes(rs, c)
+
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Income above tax threshold equal to donation should return 0 tax", func(t *testing.T) {
+		donation := 60000.0
+		rs := []calculator.TaxCSV{
+			{TotalIncome: 210000, Donation: &donation, WithHoldingTax: new(float64)},
+		}
+		c := config.Config{}
+		expected := []calculator.CalculateByCSVResponseItem{
+			{TotalIncome: 210000, Tax: 0},
+		}
+
+		result := calculator.CalculateTaxes(rs, c)
+
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Multiple csv rows , should return all rows", func(t *testing.T) {
+		rs := []calculator.TaxCSV{
+			{TotalIncome: 100000, Donation: new(float64), WithHoldingTax: new(float64)},
+			{TotalIncome: 100000, Donation: new(float64), WithHoldingTax: new(float64)},
+			{TotalIncome: 100000, Donation: new(float64), WithHoldingTax: new(float64)},
+		}
+		c := config.Config{PersonalDeduction: 0}
+		expected := len(rs)
+
+		result := calculator.CalculateTaxes(rs, c)
+
+		assert.Equal(t, expected, len(result))
+	})
+}

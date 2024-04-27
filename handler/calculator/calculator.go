@@ -109,7 +109,7 @@ func CalculateTax(b CalculateTaxBody, c config.Config) CalculateTaxResult {
 	return CalculateTaxResult{math.Max(0, tax), taxLevel, 0}
 }
 
-func CalculateTaxByCsv(rs []TaxCSV, c config.Config) []CalculateByCSVResponseItem {
+func CalculateTaxes(rs []TaxCSV, c config.Config) []CalculateByCSVResponseItem {
 	res := []CalculateByCSVResponseItem{}
 	for _, r := range rs {
 		allowance := math.Min(*r.Donation, config.MAX_DONATION)

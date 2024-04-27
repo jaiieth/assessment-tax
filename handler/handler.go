@@ -45,6 +45,7 @@ func (h Handler) CalculateTaxHandler(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, helper.ErrorRes("Oops, something went wrong"))
 	}
 
+	fmt.Println("🚀 | file: handler.go | line 44 | func | config : ", config)
 	res := calc.CalculateTax(body, config)
 
 	return c.JSON(http.StatusOK, res)
@@ -123,6 +124,6 @@ func (h Handler) CalculateByCsvHandler(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, helper.ErrorRes("Oops, something went wrong"))
 	}
 
-	res := calc.CalculateTaxByCsv(records, config)
+	res := calc.CalculateTaxes(records, config)
 	return c.JSON(http.StatusOK, calc.CalculateByCSVResponse{Taxes: res})
 }
