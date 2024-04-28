@@ -70,8 +70,8 @@ type Deduction struct {
 	Amount *float64 `json:"amount" validate:"required,gte=0"`
 }
 
-func (d Deduction) BindAndValidateStruct(c echo.Context) error {
-	if err := c.Bind(&d); err != nil {
+func (d *Deduction) BindAndValidateStruct(c echo.Context) error {
+	if err := c.Bind(d); err != nil {
 		return fmt.Errorf("err: Cannot bind JSON")
 	}
 

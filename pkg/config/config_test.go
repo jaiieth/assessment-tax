@@ -154,7 +154,7 @@ func TestBindAndValidateStruct(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		d := config.Deduction{}
+		d := &config.Deduction{}
 
 		err := d.BindAndValidateStruct(c)
 
