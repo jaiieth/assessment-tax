@@ -1,8 +1,6 @@
 package main
 
 import (
-	"net/http"
-
 	"github.com/jaiieth/assessment-tax/helper"
 	"github.com/jaiieth/assessment-tax/middleware"
 	"github.com/jaiieth/assessment-tax/pkg/calculator"
@@ -19,19 +17,14 @@ func main() {
 
 	e.Use(middleware.Logger)
 	e.Validator = helper.NewValidator()
-	e.GET("/", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello, Go Bootcamp!")
-	})
+
+	admin := e.Group("/admin", middleware.Auth)
 
 	c := calculator.NewHandler(db)
-	e.POST("/tax/calculations", c.CalculateTaxHandler)
-	e.POST("/tax/calculations/upload-csv", c.CalculateByCsvHandler)
-
 	a := config.NewHandler(db)
-	admin := e.Group("/admin", middleware.Auth)
-	admin.GET("/config", a.GetConfigHandler)
-	admin.POST("/deductions/personal", a.SetPersonalDeductionHandler)
-	admin.POST("/deductions/k-receipt", a.SetMaxKReceiptHandler)
+
+	c.RegisterRoutes(e)
+	a.RegisterRoutes(admin)
 
 	e.Logger.Fatal(e.Start(":1323"))
 }
