@@ -50,6 +50,7 @@ func CalculateTax(b CalculateTaxBody, c config.Config) CalculateTaxResult {
 	tax := GetTotalTax(b.TotalIncome-c.PersonalDeduction-allowance) - b.WithHoldingTax
 	var taxLevel []TaxLevel
 	if tax < 0 {
+		taxLevel = GetTaxLevels(b.TotalIncome - allowance - c.PersonalDeduction)
 		return CalculateTaxResult{0, taxLevel, math.Abs(tax)}
 	}
 
