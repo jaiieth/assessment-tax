@@ -8,10 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jaiieth/assessment-tax/config"
-	"github.com/jaiieth/assessment-tax/handler"
-	"github.com/jaiieth/assessment-tax/handler/calculator"
 	"github.com/jaiieth/assessment-tax/helper"
+	"github.com/jaiieth/assessment-tax/pkg/calculator"
+	"github.com/jaiieth/assessment-tax/pkg/config"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 )
@@ -37,6 +36,9 @@ func (db StubDatabase) GetConfig() (config.Config, error) {
 	return db.Config, nil
 }
 func (db StubDatabase) SetPersonalDeduction(float64) (config.Config, error) {
+	return db.Config, nil
+}
+func (db StubDatabase) SetMaxKReceipt(float64) (config.Config, error) {
 	return db.Config, nil
 }
 
@@ -214,7 +216,7 @@ func TestCalculationHandler(t *testing.T) {
 		}`))
 		c.Request().Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
-		stubHander := handler.New(
+		stubHander := calculator.NewHandler(
 			StubDatabase{
 				Config: config.Config{
 					PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION,
@@ -234,7 +236,7 @@ func TestCalculationHandler(t *testing.T) {
 		c, rec := NewContext(http.MethodPost, "/tax/calculations", strings.NewReader(`{"totalIncome": Invalid}`))
 		c.Request().Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
-		stubHander := handler.New(
+		stubHander := calculator.NewHandler(
 			StubDatabase{
 				Config: config.Config{
 					PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION,
@@ -254,7 +256,7 @@ func TestCalculationHandler(t *testing.T) {
 		c, rec := NewContext(http.MethodPost, "/tax/calculations", strings.NewReader(`{}`))
 		c.Request().Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
-		stubHander := handler.New(
+		stubHander := calculator.NewHandler(
 			StubDatabase{
 				Config: config.Config{
 					PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION,
@@ -289,7 +291,7 @@ func TestCalculationHandler(t *testing.T) {
 		}`))
 		c.Request().Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
-		stubHander := handler.New(
+		stubHander := calculator.NewHandler(
 			StubDatabase{
 				Config: config.Config{
 					PersonalDeduction: config.DEFAULT_PERSONAL_DEDUCTION,
