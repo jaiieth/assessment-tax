@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -169,7 +170,7 @@ func TestValidCSVFile(t *testing.T) {
 	defer os.Remove(file.Name()) // Ensure the temporary file is deleted
 	defer file.Close()           // Ensure the file is closed after writing
 
-	csvData := []byte("TotalIncome,Donation,WithHoldingTax\n10000,500,200\n20000,1000,400\n")
+	csvData := []byte("totalIncome,wht,donation\n10000,500,200\n20000,1000,400\n")
 	if _, err := file.Write(csvData); err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +184,11 @@ func TestValidCSVFile(t *testing.T) {
 	// Prepare a multipart writer
 	var b bytes.Buffer
 	mw := multipart.NewWriter(&b)
-	_, err = mw.CreateFormFile("file", "taxes.csv")
+	fw, err := mw.CreateFormFile("taxes.csv", file.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = io.Copy(fw, file)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,6 +199,7 @@ func TestValidCSVFile(t *testing.T) {
 	file.Seek(0, 0)
 
 	e := echo.New()
+	e.Validator = helper.NewValidator()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/tax/calculations/upload-csv", &b)
 	req.Header.Set(echo.HeaderContentType, mw.FormDataContentType())
@@ -203,240 +209,89 @@ func TestValidCSVFile(t *testing.T) {
 	h.CalculateByCsvHandler(c)
 
 	var res calc.CalculateByCSVResponse
+
 	assert.Equal(t, http.StatusOK, rec.Code, "expected status code %d, got %d", http.StatusOK, rec.Code)
 	assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &res), "failed to unmarshal response body")
 }
 
-// // Empty CSV file is uploaded
-// func TestEmptyCSVFile(t *testing.T) {
-// 	// Mocking the echo.Context
-// 	e := echo.New()
-// 	req := httptest.NewRequest(http.MethodPost, "/", nil)
-// 	rec := httptest.NewRecorder()
-// 	c := e.NewContext(req, rec)
+// Valid CSV file is uploaded and processed successfully
+func TestGetConfigError(t *testing.T) {
 
-// 	// Creating a temporary empty CSV file
-// 	file, err := ioutil.TempFile("", "taxes.csv")
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	defer os.Remove(file.Name())
+	// Create a temporary file to mimic a real file upload
+	file, err := os.CreateTemp("", "taxes.csv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(file.Name()) // Ensure the temporary file is deleted
+	defer file.Close()           // Ensure the file is closed after writing
 
-// 	// Setting up the form file in the request context
-// 	req.Header.Set(echo.HeaderContentType, echo.MIMEMultipartForm)
-// 	req.MultipartForm = &multipart.Form{
-// 		File: map[string][]*multipart.FileHeader{
-// 			"taxes.csv": []*multipart.FileHeader{
-// 				{
-// 					Filename: "taxes.csv",
-// 					Size:     0,
-// 				},
-// 			},
-// 		},
-// 	}
+	csvData := []byte("totalIncome,wht,donation\n10000,500,200\n20000,1000,400\n")
+	if _, err := file.Write(csvData); err != nil {
+		t.Fatal(err)
+	}
 
-// 	// Calling the handler function
-// 	if err := h.CalculateByCsvHandler(c); err != nil {
-// 		t.Fatal(err)
-// 	}
+	// Rewind to the start of the file so it can be read during the request handling
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-// 	// Asserting the response status code
-// 	if rec.Code != http.StatusBadRequest {
-// 		t.Errorf("expected status code %d but got %d", http.StatusBadRequest, rec.Code)
-// 	}
+	// Prepare a multipart writer
+	var b bytes.Buffer
+	mw := multipart.NewWriter(&b)
+	fw, err := mw.CreateFormFile("taxes.csv", file.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = io.Copy(fw, file)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-// 	// Asserting the response body
-// 	var res ErrorResponse
-// 	if err := json.Unmarshal(rec.Body.Bytes(), &res); err != nil {
-// 		t.Fatal(err)
-// 	}
+	mw.Close()
 
-// 	expectedRes := ErrorResponse{
-// 		Message: "invalid request",
-// 	}
+	// Reset file position for reading
+	file.Seek(0, 0)
 
-// 	if !reflect.DeepEqual(res, expectedRes) {
-// 		t.Errorf("expected response %+v but got %+v", expectedRes, res)
-// 	}
-// }
+	e := echo.New()
+	e.Validator = helper.NewValidator()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/tax/calculations/upload-csv", &b)
+	req.Header.Set(echo.HeaderContentType, mw.FormDataContentType())
+	c := e.NewContext(req, rec)
 
-// // Personal deduction and donation are within valid range
-// func TestValidCSVFile(t *testing.T) {
-// 	// Mocking the echo.Context
-// 	e := echo.New()
-// 	req := httptest.NewRequest(http.MethodPost, "/", nil)
-// 	rec := httptest.NewRecorder()
-// 	c := e.NewContext(req, rec)
+	stubDB := &mockDB{
+		Error: errors.New("failed to retrieve config"),
+	}
 
-// 	// Creating a temporary CSV file
-// 	file, err := ioutil.TempFile("", "taxes.csv")
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	defer os.Remove(file.Name())
+	h := calc.NewHandler(stubDB)
+	h.CalculateByCsvHandler(c)
 
-// 	// Writing valid CSV data to the file
-// 	csvData := []byte("TotalIncome,Donation,WithHoldingTax\n10000,500,200\n20000,1000,400\n")
-// 	if _, err := file.Write(csvData); err != nil {
-// 		t.Fatal(err)
-// 	}
+	var res calc.CalculateByCSVResponse
 
-// 	// Setting up the form file in the request context
-// 	req.Header.Set(echo.HeaderContentType, echo.MIMEMultipartForm)
-// 	req.MultipartForm = &multipart.Form{
-// 		File: map[string][]*multipart.FileHeader{
-// 			"taxes.csv": []*multipart.FileHeader{
-// 				{
-// 					Filename: "taxes.csv",
-// 					Size:     int64(len(csvData)),
-// 				},
-// 			},
-// 		},
-// 	}
+	assert.Equal(t, http.StatusInternalServerError, rec.Code, "expected status code %d, got %d", http.StatusOK, rec.Code)
+	assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &res), "failed to unmarshal response body")
+}
+func TestNoTaxesCSVFile(t *testing.T) {
+	// Create a temporary file to mimic a real file upload
+	file, err := os.CreateTemp("", "taxes.csv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(file.Name()) // Ensure the temporary file is deleted
+	defer file.Close()           // Ensure the file is closed after writing
+	// Reset file position for reading
+	file.Seek(0, 0)
 
-// 	// Calling the handler function
-// 	if err := h.CalculateByCsvHandler(c); err != nil {
-// 		t.Fatal(err)
-// 	}
+	e := echo.New()
+	e.Validator = helper.NewValidator()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/tax/calculations/upload-csv", nil)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationForm)
+	c := e.NewContext(req, rec)
 
-// 	// Asserting the response status code
-// 	if rec.Code != http.StatusOK {
-// 		t.Errorf("expected status code %d but got %d", http.StatusOK, rec.Code)
-// 	}
+	h := calc.NewHandler(&mockDB{})
+	h.CalculateByCsvHandler(c)
 
-// 	// Asserting the response body
-// 	var res CalculateByCSVResponse
-// 	if err := json.Unmarshal(rec.Body.Bytes(), &res); err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	expectedRes := CalculateByCSVResponse{
-// 		Taxes: []CalculateByCSVResponseItem{
-// 			{TotalIncome: 10000, Tax: 2300, Refund: 0},
-// 			{TotalIncome: 20000, Tax: 4600, Refund: 0},
-// 		},
-// 	}
-
-// 	if !reflect.DeepEqual(res, expectedRes) {
-// 		t.Errorf("expected response %+v but got %+v", expectedRes, res)
-// 	}
-// }
-
-// // Personal deduction or donation exceed valid range
-// func TestInvalidPersonalDeductionOrDonation(t *testing.T) {
-// 	// Mocking the echo.Context
-// 	e := echo.New()
-// 	req := httptest.NewRequest(http.MethodPost, "/", nil)
-// 	rec := httptest.NewRecorder()
-// 	c := e.NewContext(req, rec)
-
-// 	// Creating a temporary CSV file
-// 	file, err := ioutil.TempFile("", "taxes.csv")
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	defer os.Remove(file.Name())
-
-// 	// Writing invalid CSV data to the file
-// 	csvData := []byte("TotalIncome,Donation,WithHoldingTax\n10000,1500,200\n20000,3000,400\n")
-// 	if _, err := file.Write(csvData); err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	// Setting up the form file in the request context
-// 	req.Header.Set(echo.HeaderContentType, echo.MIMEMultipartForm)
-// 	req.MultipartForm = &multipart.Form{
-// 		File: map[string][]*multipart.FileHeader{
-// 			"taxes.csv": []*multipart.FileHeader{
-// 				{
-// 					Filename: "taxes.csv",
-// 					Size:     int64(len(csvData)),
-// 				},
-// 			},
-// 		},
-// 	}
-
-// 	// Calling the handler function
-// 	if err := h.CalculateByCsvHandler(c); err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	// Asserting the response status code
-// 	if rec.Code != http.StatusBadRequest {
-// 		t.Errorf("expected status code %d but got %d", http.StatusBadRequest, rec.Code)
-// 	}
-
-// 	// Asserting the response body
-// 	var res ErrorResponse
-// 	if err := json.Unmarshal(rec.Body.Bytes(), &res); err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	expectedRes := ErrorResponse{
-// 		Message: "invalid request",
-// 	}
-
-// 	if !reflect.DeepEqual(res, expectedRes) {
-// 		t.Errorf("expected response %+v but got %+v", expectedRes, res)
-// 	}
-// }
-
-// // Negative withholding tax is provided
-// func TestNegativeWithholdingTax(t *testing.T) {
-// 	// Mocking the echo.Context
-// 	e := echo.New()
-// 	req := httptest.NewRequest(http.MethodPost, "/", nil)
-// 	rec := httptest.NewRecorder()
-// 	c := e.NewContext(req, rec)
-
-// 	// Creating a temporary CSV file
-// 	file, err := ioutil.TempFile("", "taxes.csv")
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	defer os.Remove(file.Name())
-
-// 	// Writing invalid CSV data to the file
-// 	csvData := []byte("TotalIncome,Donation,WithHoldingTax\n10000,500,-200\n20000,1000,-400\n")
-// 	if _, err := file.Write(csvData); err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	// Setting up the form file in the request context
-// 	req.Header.Set(echo.HeaderContentType, echo.MIMEMultipartForm)
-// 	req.MultipartForm = &multipart.Form{
-// 		File: map[string][]*multipart.FileHeader{
-// 			"taxes.csv": []*multipart.FileHeader{
-// 				{
-// 					Filename: "taxes.csv",
-// 					Size:     int64(len(csvData)),
-// 				},
-// 			},
-// 		},
-// 	}
-
-// 	handler:= calc.NewHandler(&mockDB{})
-// 	// Calling the handler function
-// 	if err := h.CalculateByCsvHandler(c); err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	// Asserting the response status code
-// 	if rec.Code != http.StatusBadRequest {
-// 		t.Errorf("expected status code %d but got %d", http.StatusBadRequest, rec.Code)
-// 	}
-
-// 	// Asserting the response body
-// 	var res helper.ErrorResponse
-// 	if err := json.Unmarshal(rec.Body.Bytes(), &res); err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	expectedRes := helper.ErrorResponse{
-// 		Message: "invalid request",
-// 	}
-
-// 	if !reflect.DeepEqual(res, expectedRes) {
-// 		t.Errorf("expected response %+v but got %+v", expectedRes, res)
-// 	}
-// }
+	assert.Equal(t, http.StatusBadRequest, rec.Code, "expected status code %d, got %d", http.StatusOK, rec.Code)
+}
