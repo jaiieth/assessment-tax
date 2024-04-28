@@ -17,97 +17,6 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// Successful request with valid input
-func TestSuccessfulRequestWithValidInput(t *testing.T) {
-	body := calc.CalculateTaxBody{
-		TotalIncome:    500000,
-		WithHoldingTax: 50000,
-		Allowances:     []calc.Allowance{{Type: "donation", Amount: 50000}},
-	}
-	bodyJSON, err := json.Marshal(body)
-	if err != nil {
-		t.Errorf("failed to marshal body: %v", err)
-	}
-
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/calculate-tax", bytes.NewBuffer(bodyJSON))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	e := echo.New()
-	e.Validator = helper.NewValidator()
-	c := e.NewContext(req, rec)
-
-	h := calc.NewHandler(&mockDB{})
-	h.CalculateTaxHandler(c)
-
-	assert.Equal(t, http.StatusOK, rec.Code, fmt.Sprintf("status code should be %d but got %v", http.StatusOK, rec.Code))
-
-	var response calc.CalculateTaxResult
-	err = json.Unmarshal(rec.Body.Bytes(), &response)
-	assert.NoError(t, err, "failed to unmarshal response body")
-}
-
-func TestInvalidRequestWithMissingInputValues(t *testing.T) {
-	body := calc.CalculateTaxBody{
-		WithHoldingTax: 50000,
-		Allowances:     []calc.Allowance{{Type: "donation", Amount: 50000}},
-	}
-	bodyJSON, _ := json.Marshal(body)
-
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/calculate-tax", bytes.NewBuffer(bodyJSON))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	e := echo.New()
-	e.Validator = helper.NewValidator()
-	c := e.NewContext(req, rec)
-
-	h := calc.NewHandler(&mockDB{})
-	h.CalculateTaxHandler(c)
-	assert.Equal(t, http.StatusBadRequest, rec.Code, fmt.Sprintf("status code should be %d but got %v", http.StatusOK, rec.Code))
-}
-
-func TestInvalidRequestWithInvalidInput(t *testing.T) {
-	body := calc.CalculateTaxBody{
-		TotalIncome:    -5000,
-		WithHoldingTax: 50000,
-		Allowances:     []calc.Allowance{{Type: "donation", Amount: 50000}},
-	}
-	bodyJSON, _ := json.Marshal(body)
-
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/calculate-tax", bytes.NewBuffer(bodyJSON))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	e := echo.New()
-	e.Validator = helper.NewValidator()
-	c := e.NewContext(req, rec)
-
-	h := calc.NewHandler(&mockDB{})
-	h.CalculateTaxHandler(c)
-
-	var response helper.ErrorResponse
-	err := json.Unmarshal(rec.Body.Bytes(), &response)
-	assert.Equal(t, http.StatusBadRequest, rec.Code, fmt.Sprintf("status code should be %d but got %v", http.StatusOK, rec.Code))
-	assert.NoError(t, err, "failed to unmarshal response body")
-	assert.Equal(t, helper.ErrorRes("invalid request"), response)
-}
-
-func TestInvalidRequestWithInvalidInput_InvalidJSONBody(t *testing.T) {
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/calculate-tax", bytes.NewBuffer([]byte(`{Invalid}`)))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	e := echo.New()
-	e.Validator = helper.NewValidator()
-	c := e.NewContext(req, rec)
-
-	h := calc.NewHandler(&mockDB{})
-	h.CalculateTaxHandler(c)
-
-	var response helper.ErrorResponse
-	err := json.Unmarshal(rec.Body.Bytes(), &response)
-	assert.Equal(t, http.StatusBadRequest, rec.Code, fmt.Sprintf("status code should be %d but got %v", http.StatusOK, rec.Code))
-	assert.NoError(t, err, "failed to unmarshal response body")
-	assert.Equal(t, helper.ErrorRes("invalid request"), response)
-}
-
 type mockDB struct {
 	Config config.Config
 	Error  error
@@ -119,12 +28,107 @@ func (m *mockDB) GetConfig() (config.Config, error) {
 }
 func (m *mockDB) SetPersonalDeduction(n float64) (config.Config, error) {
 	m.Called(n)
+
 	return m.Config, nil
 }
 func (m *mockDB) SetMaxKReceipt(n float64) (config.Config, error) {
 	m.Called()
 	return m.Config, nil
 }
+
+func TestCalculateTaxHandler(t *testing.T) {
+	t.Run("TestSuccessfulRequestWithValidInput", func(t *testing.T) {
+		body := calc.CalculateTaxBody{
+			TotalIncome:    500000,
+			WithHoldingTax: 50000,
+			Allowances:     []calc.Allowance{{Type: "donation", Amount: 50000}},
+		}
+		bodyJSON, err := json.Marshal(body)
+		if err != nil {
+			t.Errorf("failed to marshal body: %v", err)
+		}
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/calculate-tax", bytes.NewBuffer(bodyJSON))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		e := echo.New()
+		e.Validator = helper.NewValidator()
+		c := e.NewContext(req, rec)
+
+		h := calc.NewHandler(&mockDB{})
+		h.CalculateTaxHandler(c)
+
+		assert.Equal(t, http.StatusOK, rec.Code, fmt.Sprintf("status code should be %d but got %v", http.StatusOK, rec.Code))
+
+		var response calc.CalculateTaxResult
+		err = json.Unmarshal(rec.Body.Bytes(), &response)
+		assert.NoError(t, err, "failed to unmarshal response body")
+	})
+
+	t.Run("TestInvalidRequestWithMissingInputValues", func(t *testing.T) {
+		body := calc.CalculateTaxBody{
+			WithHoldingTax: 50000,
+			Allowances:     []calc.Allowance{{Type: "donation", Amount: 50000}},
+		}
+		bodyJSON, _ := json.Marshal(body)
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/calculate-tax", bytes.NewBuffer(bodyJSON))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		e := echo.New()
+		e.Validator = helper.NewValidator()
+		c := e.NewContext(req, rec)
+
+		h := calc.NewHandler(&mockDB{})
+		h.CalculateTaxHandler(c)
+		assert.Equal(t, http.StatusBadRequest, rec.Code, fmt.Sprintf("status code should be %d but got %v", http.StatusOK, rec.Code))
+	})
+
+	t.Run("TestInvalidRequestWithInvalidInput", func(t *testing.T) {
+		body := calc.CalculateTaxBody{
+			TotalIncome:    -5000,
+			WithHoldingTax: 50000,
+			Allowances:     []calc.Allowance{{Type: "donation", Amount: 50000}},
+		}
+		bodyJSON, _ := json.Marshal(body)
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/calculate-tax", bytes.NewBuffer(bodyJSON))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		e := echo.New()
+		e.Validator = helper.NewValidator()
+		c := e.NewContext(req, rec)
+
+		h := calc.NewHandler(&mockDB{})
+		h.CalculateTaxHandler(c)
+
+		var response helper.ErrorResponse
+		err := json.Unmarshal(rec.Body.Bytes(), &response)
+		assert.Equal(t, http.StatusBadRequest, rec.Code, fmt.Sprintf("status code should be %d but got %v", http.StatusOK, rec.Code))
+		assert.NoError(t, err, "failed to unmarshal response body")
+		assert.Equal(t, helper.ErrorRes("invalid request"), response)
+	})
+
+	t.Run("TestInvalidRequestWithInvalidInput_InvalidJSONBody", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/calculate-tax", bytes.NewBuffer([]byte(`{Invalid}`)))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		e := echo.New()
+		e.Validator = helper.NewValidator()
+		c := e.NewContext(req, rec)
+
+		h := calc.NewHandler(&mockDB{})
+		h.CalculateTaxHandler(c)
+
+		var response helper.ErrorResponse
+		err := json.Unmarshal(rec.Body.Bytes(), &response)
+		assert.Equal(t, http.StatusBadRequest, rec.Code, fmt.Sprintf("status code should be %d but got %v", http.StatusOK, rec.Code))
+		assert.NoError(t, err, "failed to unmarshal response body")
+		assert.Equal(t, helper.ErrorRes("invalid request"), response)
+	})
+}
+
+// Successful request with valid input
 
 func TestErrorWhenUnableToRetrieveConfig(t *testing.T) {
 	body := calc.CalculateTaxBody{

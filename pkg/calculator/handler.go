@@ -1,7 +1,6 @@
 package calculator
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/jaiieth/assessment-tax/helper"
@@ -24,7 +23,6 @@ func (h Handler) CalculateTaxHandler(c echo.Context) error {
 	}
 
 	if err := c.Validate(body); err != nil {
-		fmt.Println("🚀 | file: handler.go | line 34 | iferr:=c.Validate | err : ", err)
 		return c.JSON(http.StatusBadRequest, helper.ErrorRes("invalid request"))
 	}
 
@@ -36,7 +34,6 @@ func (h Handler) CalculateTaxHandler(c echo.Context) error {
 	res := CalculateTax(body, config)
 
 	return c.JSON(http.StatusOK, res)
-
 }
 
 func (h Handler) CalculateByCsvHandler(c echo.Context) error {
