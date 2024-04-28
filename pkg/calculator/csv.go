@@ -1,4 +1,4 @@
-package handler
+package calculator
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ type TaxCSVInstance struct {
 	File multipart.File
 }
 
-func (ti TaxCSVInstance) validate() error {
+func (ti TaxCSVInstance) Validate() error {
 	rows, err := gocsv.LazyCSVReader(ti.File).ReadAll()
 	if err != nil {
 		return fmt.Errorf("wrong csv format")
@@ -40,7 +40,7 @@ func (ti TaxCSVInstance) validate() error {
 	return nil
 }
 
-func (t TaxCSVInstance) unmarshal(s interface{}) error {
+func (t TaxCSVInstance) Unmarshal(s interface{}) error {
 	if err := gocsv.UnmarshalMultipartFile(&t.File, s); err != nil {
 		return err
 	}

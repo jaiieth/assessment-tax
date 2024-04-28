@@ -1,4 +1,4 @@
-package handler_test
+package calculator_test
 
 import (
 	"bytes"
@@ -9,10 +9,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/jaiieth/assessment-tax/config"
-	"github.com/jaiieth/assessment-tax/handler"
-	calc "github.com/jaiieth/assessment-tax/handler/calculator"
 	"github.com/jaiieth/assessment-tax/helper"
+	calc "github.com/jaiieth/assessment-tax/pkg/calculator"
+	"github.com/jaiieth/assessment-tax/pkg/config"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -33,9 +32,11 @@ func TestSuccessfulRequestWithValidInput(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/calculate-tax", bytes.NewBuffer(bodyJSON))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	c := echo.New().NewContext(req, rec)
+	e := echo.New()
+	e.Validator = helper.NewValidator()
+	c := e.NewContext(req, rec)
 
-	h := handler.New(&mockDB{})
+	h := calc.NewHandler(&mockDB{})
 	h.CalculateTaxHandler(c)
 
 	assert.Equal(t, http.StatusOK, rec.Code, fmt.Sprintf("status code should be %d but got %v", http.StatusOK, rec.Code))
@@ -55,9 +56,11 @@ func TestInvalidRequestWithMissingInputValues(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/calculate-tax", bytes.NewBuffer(bodyJSON))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	c := echo.New().NewContext(req, rec)
+	e := echo.New()
+	e.Validator = helper.NewValidator()
+	c := e.NewContext(req, rec)
 
-	h := handler.New(&mockDB{})
+	h := calc.NewHandler(&mockDB{})
 	h.CalculateTaxHandler(c)
 	assert.Equal(t, http.StatusBadRequest, rec.Code, fmt.Sprintf("status code should be %d but got %v", http.StatusOK, rec.Code))
 }
@@ -73,9 +76,11 @@ func TestInvalidRequestWithInvalidInput(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/calculate-tax", bytes.NewBuffer(bodyJSON))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	c := echo.New().NewContext(req, rec)
+	e := echo.New()
+	e.Validator = helper.NewValidator()
+	c := e.NewContext(req, rec)
 
-	h := handler.New(&mockDB{})
+	h := calc.NewHandler(&mockDB{})
 	h.CalculateTaxHandler(c)
 
 	var response helper.ErrorResponse
@@ -89,9 +94,11 @@ func TestInvalidRequestWithInvalidInput_InvalidJSONBody(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/calculate-tax", bytes.NewBuffer([]byte(`{Invalid}`)))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	c := echo.New().NewContext(req, rec)
+	e := echo.New()
+	e.Validator = helper.NewValidator()
+	c := e.NewContext(req, rec)
 
-	h := handler.New(&mockDB{})
+	h := calc.NewHandler(&mockDB{})
 	h.CalculateTaxHandler(c)
 
 	var response helper.ErrorResponse
@@ -128,10 +135,12 @@ func TestErrorWhenUnableToRetrieveConfig(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/calculate-tax", bytes.NewBuffer(bodyJSON))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	c := echo.New().NewContext(req, rec)
+	e := echo.New()
+	e.Validator = helper.NewValidator()
+	c := e.NewContext(req, rec)
 
 	db := &mockDB{Error: errors.New("failed to retrieve config")}
-	h := handler.New(db)
+	h := calc.NewHandler(db)
 	h.DB = db
 
 	h.CalculateTaxHandler(c)

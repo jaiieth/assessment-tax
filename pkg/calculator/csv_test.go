@@ -1,10 +1,10 @@
-package handler
+package calculator_test
 
 import (
 	"os"
 	"testing"
 
-	calc "github.com/jaiieth/assessment-tax/handler/calculator"
+	calc "github.com/jaiieth/assessment-tax/pkg/calculator"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,11 +48,11 @@ func TestValidateValidCSVFile(t *testing.T) {
 
 	defer os.Remove(tempFile.Name())
 
-	taxCSV := TaxCSVInstance{
+	taxCSV := calc.TaxCSVInstance{
 		File: tempFile,
 	}
 
-	err = taxCSV.validate()
+	err = taxCSV.Validate()
 
 	assert.NoError(t, err, "Expected nil error, but got: %v", err)
 }
@@ -68,11 +68,11 @@ func TestValidateInvalidCSVFile(t *testing.T) {
 
 	defer os.Remove(tempFile.Name())
 
-	taxCSV := TaxCSVInstance{
+	taxCSV := calc.TaxCSVInstance{
 		File: tempFile,
 	}
 
-	err = taxCSV.validate()
+	err = taxCSV.Validate()
 
 	assert.Error(t, err, "Expected non-nil error, but got nil")
 }
@@ -88,11 +88,11 @@ func TestValidateValidCSVFileWithExtraHeaders(t *testing.T) {
 	}
 	defer os.Remove(tempFile.Name())
 
-	taxCSV := TaxCSVInstance{
+	taxCSV := calc.TaxCSVInstance{
 		File: tempFile,
 	}
 
-	err = taxCSV.validate()
+	err = taxCSV.Validate()
 	assert.Error(t, err, "Expected non-nil error, but got nil")
 }
 
@@ -106,11 +106,11 @@ func TestValidateValidCSVFileWithExpectedHeadersAndEmptyValues(t *testing.T) {
 	}
 	defer os.Remove(tempFile.Name())
 
-	taxCSV := TaxCSVInstance{
+	taxCSV := calc.TaxCSVInstance{
 		File: tempFile,
 	}
 
-	err = taxCSV.validate()
+	err = taxCSV.Validate()
 	assert.Error(t, err, "Expected non-nil error, but got nil")
 }
 
@@ -126,11 +126,11 @@ func TestUnmarshalCSVWithNonNumericValues(t *testing.T) {
 	}
 	defer os.Remove(tempFile.Name())
 
-	taxCSV := TaxCSVInstance{
+	taxCSV := calc.TaxCSVInstance{
 		File: tempFile,
 	}
 
-	err = taxCSV.unmarshal(&[]calc.TaxCSV{})
+	err = taxCSV.Unmarshal(&[]calc.TaxCSV{})
 	assert.Error(t, err, "Expected non-nil error, but got nil")
 }
 
@@ -145,10 +145,10 @@ func TestUnmarshalValidCSV(t *testing.T) {
 	}
 	defer os.Remove(tempFile.Name())
 
-	taxCSV := TaxCSVInstance{
+	taxCSV := calc.TaxCSVInstance{
 		File: tempFile,
 	}
 
-	err = taxCSV.unmarshal(&[]calc.TaxCSV{})
+	err = taxCSV.Unmarshal(&[]calc.TaxCSV{})
 	assert.NoError(t, err, "Expected nil error, but got: %v", err)
 }
