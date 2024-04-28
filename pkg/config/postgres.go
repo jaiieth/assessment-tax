@@ -2,9 +2,7 @@ package config
 
 import (
 	"database/sql"
-	"fmt"
-
-	"github.com/joho/godotenv"
+	"os"
 
 	_ "github.com/lib/pq"
 )
@@ -14,25 +12,9 @@ type Postgres struct {
 }
 
 func New() (*Postgres, error) {
-	godotenv.Load()
-	var env map[string]string
-	env, err := godotenv.Read()
+	var DATABASE_URL = os.Getenv("DATABASE_URL")
 
-	if err != nil {
-		return nil, err
-	}
-
-	var (
-		host     = env["DB_HOST"]
-		port     = env["DB_PORT"]
-		user     = env["DB_USER"]
-		password = env["DB_PASSWORD"]
-		dbname   = env["DB_NAME"]
-	)
-
-	databaseSource := fmt.Sprintf("host=%s port=%s user=%s "+
-		"password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
-	db, err := sql.Open("postgres", databaseSource)
+	db, err := sql.Open("postgres", DATABASE_URL)
 	if err != nil {
 		return nil, err
 	}
