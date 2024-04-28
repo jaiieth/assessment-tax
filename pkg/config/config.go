@@ -67,11 +67,11 @@ func (p *Postgres) SetMaxKReceipt(n float64) (config Config, err error) {
 }
 
 type Deduction struct {
-	Amount float64 `json:"amount" validate:"gte=0"`
+	Amount *float64 `json:"amount" validate:"required,gte=0"`
 }
 
-func (d Deduction) BindAndValidateStruct(c echo.Context) error {
-	if err := c.Bind(&d); err != nil {
+func (d *Deduction) BindAndValidateStruct(c echo.Context) error {
+	if err := c.Bind(d); err != nil {
 		return fmt.Errorf("err: Cannot bind JSON")
 	}
 
@@ -83,7 +83,7 @@ func (d Deduction) BindAndValidateStruct(c echo.Context) error {
 }
 
 func (d Deduction) ValidateValue(min float64, max float64) error {
-	if d.Amount < min || d.Amount > max {
+	if *d.Amount < min || *d.Amount > max {
 		return fmt.Errorf("err: Not in range")
 	}
 	return nil

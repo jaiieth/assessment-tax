@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/jaiieth/assessment-tax/helper"
@@ -154,4 +157,141 @@ func TestErrorWhenUnableToRetrieveConfig(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.NoError(t, err, "failed to unmarshal response body")
 	assert.Equal(t, helper.ErrorRes("Oops, something went wrong"), response)
+}
+
+// Valid CSV file is uploaded and processed successfully
+func TestValidCSVFile(t *testing.T) {
+
+	// Create a temporary file to mimic a real file upload
+	file, err := os.CreateTemp("", "taxes.csv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(file.Name()) // Ensure the temporary file is deleted
+	defer file.Close()           // Ensure the file is closed after writing
+
+	csvData := []byte("totalIncome,wht,donation\n10000,500,200\n20000,1000,400\n")
+	if _, err := file.Write(csvData); err != nil {
+		t.Fatal(err)
+	}
+
+	// Rewind to the start of the file so it can be read during the request handling
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Prepare a multipart writer
+	var b bytes.Buffer
+	mw := multipart.NewWriter(&b)
+	fw, err := mw.CreateFormFile("taxes.csv", file.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = io.Copy(fw, file)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mw.Close()
+
+	// Reset file position for reading
+	file.Seek(0, 0)
+
+	e := echo.New()
+	e.Validator = helper.NewValidator()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/tax/calculations/upload-csv", &b)
+	req.Header.Set(echo.HeaderContentType, mw.FormDataContentType())
+	c := e.NewContext(req, rec)
+
+	h := calc.NewHandler(&mockDB{})
+	h.CalculateByCsvHandler(c)
+
+	var res calc.CalculateByCSVResponse
+
+	assert.Equal(t, http.StatusOK, rec.Code, "expected status code %d, got %d", http.StatusOK, rec.Code)
+	assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &res), "failed to unmarshal response body")
+}
+
+// Valid CSV file is uploaded and processed successfully
+func TestGetConfigError(t *testing.T) {
+
+	// Create a temporary file to mimic a real file upload
+	file, err := os.CreateTemp("", "taxes.csv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(file.Name()) // Ensure the temporary file is deleted
+	defer file.Close()           // Ensure the file is closed after writing
+
+	csvData := []byte("totalIncome,wht,donation\n10000,500,200\n20000,1000,400\n")
+	if _, err := file.Write(csvData); err != nil {
+		t.Fatal(err)
+	}
+
+	// Rewind to the start of the file so it can be read during the request handling
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Prepare a multipart writer
+	var b bytes.Buffer
+	mw := multipart.NewWriter(&b)
+	fw, err := mw.CreateFormFile("taxes.csv", file.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = io.Copy(fw, file)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mw.Close()
+
+	// Reset file position for reading
+	file.Seek(0, 0)
+
+	e := echo.New()
+	e.Validator = helper.NewValidator()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/tax/calculations/upload-csv", &b)
+	req.Header.Set(echo.HeaderContentType, mw.FormDataContentType())
+	c := e.NewContext(req, rec)
+
+	stubDB := &mockDB{
+		Error: errors.New("failed to retrieve config"),
+	}
+
+	h := calc.NewHandler(stubDB)
+	h.CalculateByCsvHandler(c)
+
+	var res calc.CalculateByCSVResponse
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code, "expected status code %d, got %d", http.StatusOK, rec.Code)
+	assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &res), "failed to unmarshal response body")
+}
+func TestNoTaxesCSVFile(t *testing.T) {
+	// Create a temporary file to mimic a real file upload
+	file, err := os.CreateTemp("", "taxes.csv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(file.Name()) // Ensure the temporary file is deleted
+	defer file.Close()           // Ensure the file is closed after writing
+	// Reset file position for reading
+	file.Seek(0, 0)
+
+	e := echo.New()
+	e.Validator = helper.NewValidator()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/tax/calculations/upload-csv", nil)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationForm)
+	c := e.NewContext(req, rec)
+
+	h := calc.NewHandler(&mockDB{})
+	h.CalculateByCsvHandler(c)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code, "expected status code %d, got %d", http.StatusOK, rec.Code)
 }

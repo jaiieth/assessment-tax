@@ -30,7 +30,7 @@ func (h Handler) SetPersonalDeductionHandler(c echo.Context) error {
 		)))
 	}
 
-	config, err := h.DB.SetPersonalDeduction(d.Amount)
+	config, err := h.DB.SetPersonalDeduction(*d.Amount)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, config)
 	}
@@ -51,7 +51,7 @@ func (h Handler) SetMaxKReceiptHandler(c echo.Context) error {
 		)))
 	}
 
-	config, err := h.DB.SetMaxKReceipt(d.Amount)
+	config, err := h.DB.SetMaxKReceipt(*d.Amount)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, config)
 	}
